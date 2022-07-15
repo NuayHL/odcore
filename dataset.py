@@ -1,4 +1,3 @@
-
 import cv2
 import os
 import numpy as np
@@ -7,6 +6,8 @@ from pycocotools.coco import COCO
 from copy import deepcopy
 from torch.utils.data import Dataset
 from torchvision import transforms
+
+import config
 
 """
 dataset output:
@@ -22,45 +23,6 @@ preprocess_train = transforms.Compose([
 ])
 
 
-class Normalizer():
-    def __init__(self):
-        self.mean = np.array([0.46431773, 0.44211456, 0.4223358])
-        self.std = np.array([0.29044453, 0.28503336, 0.29363019])
-    def __call__(self, sample):
-        img = sample['img']
-        img = img.astype(np.float32)/255
-        img = (img - self.mean)/self.std
-        return {'img':img, 'anns':sample['anns']}
-
-class Augmenter():
-    def __call__(self, sample, filp_x=0.5):
-        if np.random.rand() < filp_x:
-            img, anns = sample["img"], sample["anns"]
-            img = img[:,::-1,:]
-
-            _, width, _ = img.shape
-            anns[:, 0] = width - anns[:, 0] - anns[:, 2]
-
-            sample = {'img':img, 'anns':anns}
-
-
-        return sample
-
-class Resizer():
-    def __init__(self, config):
-        self.width = config.input_width
-        self.height = config.input_height
-    def __call__(self, sample):
-        img, anns = sample["img"], sample["anns"].astype(np.float32)
-        fy = self.height / float(img.shape[0])
-        fx = self.width / float(img.shape[1])
-        anns[:, 0] = fx * anns[:, 0]
-        anns[:, 2] = fx * anns[:, 2]
-        anns[:, 1] = fy * anns[:, 1]
-        anns[:, 3] = fy * anns[:, 3]
-        img = cv2.resize(img, (self.width, self.height))
-        return {'img':img, 'anns':anns}
-
 class CocoDataset(Dataset):
     '''
     Two index system:
@@ -70,16 +32,19 @@ class CocoDataset(Dataset):
         Default: id = idx + 1
         Always right: id = self.image_id[idx] (adopted)
     '''
-    def __init__(self, annotationPath, imgFilePath,
-                 transform=transforms.Compose([Normalizer(), Resizer()]),
+    def __init__(self, annotationPath, imgFilePath, config_data, task='train',
                  ignored_input=False):
         super(CocoDataset, self).__init__()
         self.jsonPath = annotationPath
         self.imgPath = imgFilePath + "/"
         self.annotations = COCO(annotationPath)
         self.image_id = self.annotations.getImgIds()
-        self.transform = transform
         self.ignored_input = ignored_input
+        self.task = task
+        self.config_data = config_data
+        assert self.task in ['train', 'eval']
+        if task is 'eval':
+            self.ignored_input = False
 
     def __len__(self):
         return len(self.annotations.imgs)
@@ -90,10 +55,11 @@ class CocoDataset(Dataset):
             sample['img'] = whc np.int32? img
             sample['anns] = n x (x1 y1 w h c) np.int32 img
         '''
-        img = self.annotations.loadImgs(self.image_id[idx])
+        img, (w0, h0), img_id = self.load_img(idx)
+        anns = self.load_anns(idx)
 
-        img = cv2.imread(self.imgPath + img[0]["file_name"] + ".jpg")
-        img = img[:,:,::-1]
+        if self.task is 'train' and np.random.rand() < self.config_data.mosaic:
+            self.
 
         anns = self.annotations.getAnnIds(imgIds=self.image_id[idx])
         anns = deepcopy(self.annotations.loadAnns(anns))
@@ -111,8 +77,26 @@ class CocoDataset(Dataset):
         if self.transform:
             sample = self.transform(sample)
 
-        return sample
+        if self.task is 'train':
+            return {"img":img, "anns":finanns}
+        else:
+            return {"img":img, "anns":finanns, "id":img_id}
 
+    def load_img(self, idx):
+        img = self.annotations.imgs[self.image_id[idx]]
+        w0, h0, id = img["width"], img["height"], img["id"]
+        img = cv2.imread(self.imgPath + img["file_name"] + ".jpg")
+        img = img[:,:,::-1]
+        return img, (w0, h0), id
+
+    def load_anns(self, idx):
+        anns = self.annotations.imgToAnns[self.image_id[idx]]
+        anns = [ann['bbox']+[ann['category_id']] for ann in anns if ann['category_id'] != -1 or self.ignored_input]
+        anns = np.array(anns, dtype=np.float32)
+        return anns
+
+    def get_mosaic(self, idx):
+        pass
     # return real size img
     def original_img_input(self,id):
         '''
@@ -125,18 +109,6 @@ class CocoDataset(Dataset):
         img = img[:,:,::-1]
         return img
 
-    def single_batch_input(self, idx):
-        '''
-        idx: idx
-        '''
-        if isinstance(idx, str):
-            idx, _ = self._getwithname(idx)
-        data = self[idx]
-        norm = Normalizer()
-        resizer = Resizer()
-        data = resizer(norm(data))
-        return OD_default_collater([data])
-
     def _getwithname(self, str):
         '''
         return (idx, id)
@@ -146,16 +118,27 @@ class CocoDataset(Dataset):
                 return idx, self.annotations.imgs[idx+1]["id"]
         raise KeyError('Can not find img with name %s'%str)
 
+    @staticmethod
+    def OD_default_collater(data):
+        '''
+        used in torch.utils.data.DataLaoder as collater_fn
+        parse the batch_size data into dict
+        {"imgs":List lenth B, each with np.float32 img
+         "anns":List lenth B, each with np.float32 ann, annType: x1y1wh}
+        '''
+        imgs = torch.stack([torch.from_numpy(np.transpose(s["img"], (2, 0, 1))).float() for s in data])
+        annos = [s["anns"] for s in data]
+        return {"imgs": imgs, "anns": annos}
+
 class MixCocoDatset(Dataset):
     """
     Used for combining different dataset together.
     """
-    def __init__(self, datasets: list[CocoDataset], transform=transforms.Compose([Normalizer(), Resizer()])):
+    def __init__(self, datasets: list[CocoDataset]):
         super(MixCocoDatset, self).__init__()
         self.cocodataset = datasets
         self.divids = [0]
         for i, dataset in enumerate(self.cocodataset):
-            dataset.transform = transform
             self.divids.append(len(dataset)+self.divids[i])
 
     def addDataset(self, dataset:CocoDataset):
@@ -210,17 +193,6 @@ class Txtdatset(Dataset):
 
     def _xywh_to_x1y1wh(self, anns):
         pass
-
-def OD_default_collater(data):
-    '''
-    used in torch.utils.data.DataLaoder as collater_fn
-    parse the batch_size data into dict
-    {"imgs":List lenth B, each with np.float32 img
-     "anns":List lenth B, each with np.float32 ann, annType: x1y1wh}
-    '''
-    imgs = torch.stack([torch.from_numpy(np.transpose(s["img"], (2, 0, 1))).float() for s in data])
-    annos = [s["anns"] for s in data]
-    return {"imgs":imgs, "anns":annos}
 
 def load_single_inferencing_img(img, device):
     '''

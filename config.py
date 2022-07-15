@@ -11,6 +11,21 @@ c.model.backbone = 'darknet53'
 c.model.neck = 'yolov3'
 c.model.detector = 'yolov3'
 
+c.data = CN()
+c.data.input_width = 640
+c.data.input_height = 640
+c.data.hsv_h = 0.0138
+c.data.hsv_s = 0.664
+c.data.hsv_v = 0.464
+c.data.degrees = 0.373
+c.data.translate = 0.245
+c.data.scale = 0.898
+c.data.shear = 0.602
+c.data.flipud = 0.00856
+c.data.fliplr = 0.5
+c.data.mosaic = 1.0
+c.data.mixup = 0.243
+
 c.training = CN()
 c.training.regloss = ['siou', 'l1']
 c.training.clsloss = 'bce'

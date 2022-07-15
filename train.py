@@ -18,11 +18,11 @@ class Train():
         pass
 
     def load_ckpt(self):
-
+        pass
     def save_ckpt(self):
-
+        pass
     def init_logger(self):
-
+        pass
     def build_dataloader(self):
         pass
     def load_checkpoint(self):
