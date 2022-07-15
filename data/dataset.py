@@ -5,23 +5,13 @@ import torch
 from pycocotools.coco import COCO
 from copy import deepcopy
 from torch.utils.data import Dataset
-from torchvision import transforms
 
-import config
+from .data_argment import *
 
 """
 dataset output:
     {'img': }
 """
-
-
-# need to add logging module to print which kind input is used
-
-preprocess_train = transforms.Compose([
-    transforms.Normalize(mean=[0.46431773, 0.44211456, 0.4223358],
-                         std=[0.29044453, 0.28503336, 0.29363019])
-])
-
 
 class CocoDataset(Dataset):
     '''
@@ -46,6 +36,10 @@ class CocoDataset(Dataset):
         if task is 'eval':
             self.ignored_input = False
 
+        self.normalizer = Normalizer()
+        self.general_argm = GeneralAugmenter(self.config_data)
+        self.resizer = Resizer(self.config_data)
+
     def __len__(self):
         return len(self.annotations.imgs)
 
@@ -59,28 +53,12 @@ class CocoDataset(Dataset):
         anns = self.load_anns(idx)
 
         if self.task is 'train' and np.random.rand() < self.config_data.mosaic:
-            self.
+            pass
 
         anns = self.annotations.getAnnIds(imgIds=self.image_id[idx])
         anns = deepcopy(self.annotations.loadAnns(anns))
-        finanns = []
-        for ann in anns:
-            category_id = ann["category_id"]
-            if self.bbox_type not in ann.keys(): continue
-            if not self.ignored_input and category_id == 0: continue
-            # append category
-            ann[self.bbox_type].append(category_id)
-            finanns.append(ann[self.bbox_type])
-        finanns = np.array(finanns).astype(np.int32)
-        sample = {"img":img, "anns":finanns}
 
-        if self.transform:
-            sample = self.transform(sample)
-
-        if self.task is 'train':
-            return {"img":img, "anns":finanns}
-        else:
-            return {"img":img, "anns":finanns, "id":img_id}
+        return {"img":img, "anns":anns, "id":img_id}
 
     def load_img(self, idx):
         img = self.annotations.imgs[self.image_id[idx]]
@@ -97,26 +75,6 @@ class CocoDataset(Dataset):
 
     def get_mosaic(self, idx):
         pass
-    # return real size img
-    def original_img_input(self,id):
-        '''
-        id: img_ID
-        '''
-        if isinstance(id, str):
-            _, id = self._getwithname(id)
-        img = self.annotations.loadImgs(id)
-        img = cv2.imread(self.imgPath + img[0]["file_name"] + ".jpg")
-        img = img[:,:,::-1]
-        return img
-
-    def _getwithname(self, str):
-        '''
-        return (idx, id)
-        '''
-        for idx in range(len(self)):
-            if self.annotations.imgs[idx+1]["file_name"] == str:
-                return idx, self.annotations.imgs[idx+1]["id"]
-        raise KeyError('Can not find img with name %s'%str)
 
     @staticmethod
     def OD_default_collater(data):
@@ -128,7 +86,8 @@ class CocoDataset(Dataset):
         '''
         imgs = torch.stack([torch.from_numpy(np.transpose(s["img"], (2, 0, 1))).float() for s in data])
         annos = [s["anns"] for s in data]
-        return {"imgs": imgs, "anns": annos}
+        ids = [s["id"] for s in data]
+        return {"imgs": imgs, "anns": annos, "ids":ids}
 
 class MixCocoDatset(Dataset):
     """
