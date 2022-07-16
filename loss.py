@@ -3,7 +3,7 @@ import math
 
 class DetectionLoss():
     def __init__(self, config):
-        
+        pass
     def __call__(self, dt, gt):
         return 0
 
@@ -13,6 +13,7 @@ class BCE():
         self.reduction = reduction
         self.eps = eps
     def __call__(self, dt_cls, gt_cls):
+        pass
 
 
 
