@@ -54,17 +54,18 @@ class CocoDataset(Dataset):
         anns = self.load_anns(idx)
         sample = {"img":img, "anns":anns, "id":img_id}
         self.resizer(sample, w0, h0)
-        #self.normalizer(sample)
         if self.task == 'train' and np.random.rand() < self.config_data.mosaic:
             pass
         self.general_argm(sample)
+        sample["img"] = sample["img"][:,:,::-1]
+        #sample["img"] = sample["img"].transpose((2,0,1))[:,:,::-1]
+        sample["img"] = np.ascontiguousarray(sample["img"])
         return sample
 
     def load_img(self, idx):
         img = self.annotations.imgs[self.image_id[idx]]
         w0, h0, id = img["width"], img["height"], img["id"]
         img = cv2.imread(self.imgPath + img["file_name"] + ".jpg")
-        img = img[:,:,::-1].astype(np.float32)
         return img, (w0, h0), id
 
     def load_anns(self, idx):
@@ -81,10 +82,10 @@ class CocoDataset(Dataset):
         '''
         used in torch.utils.data.DataLaoder as collater_fn
         parse the batch_size data into dict
-        {"imgs":List lenth B, each with np.float32 img
+        {"imgs":List lenth B, each with np.uint8 img
          "anns":List lenth B, each with np.float32 ann, annType: x1y1wh}
         '''
-        imgs = torch.stack([torch.from_numpy(np.transpose(s["img"], (2, 0, 1))).float() for s in data])
+        imgs = torch.stack([torch.from_numpy(np.transpose(s["img"], (2, 0, 1))) for s in data])
         annos = [s["anns"] for s in data]
         ids = [s["id"] for s in data]
         return {"imgs": imgs, "anns": annos, "ids":ids}

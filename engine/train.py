@@ -29,6 +29,7 @@ class Train():
         pass
     def build_optimizer(self):
         pass
-
+    def using_DDP(self, args, model):
+        pass
 if __name__ == "__main__":
     pass
