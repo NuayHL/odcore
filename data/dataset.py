@@ -58,7 +58,6 @@ class CocoDataset(Dataset):
             pass
         self.general_argm(sample)
         sample["img"] = sample["img"][:,:,::-1]
-        #sample["img"] = sample["img"].transpose((2,0,1))[:,:,::-1]
         sample["img"] = np.ascontiguousarray(sample["img"])
         return sample
 
@@ -82,8 +81,9 @@ class CocoDataset(Dataset):
         '''
         used in torch.utils.data.DataLaoder as collater_fn
         parse the batch_size data into dict
-        {"imgs":List lenth B, each with np.uint8 img
-         "anns":List lenth B, each with np.float32 ann, annType: x1y1wh}
+        {"imgs":List lenth B, each with torch.uint8 img
+         "anns":List lenth B, each with np.float32 ann, annType: x1y1wh
+         "ids": List lenth B, each with str imgid}
         '''
         imgs = torch.stack([torch.from_numpy(np.transpose(s["img"], (2, 0, 1))) for s in data])
         annos = [s["anns"] for s in data]
