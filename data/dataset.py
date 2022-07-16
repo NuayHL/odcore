@@ -21,24 +21,25 @@ class CocoDataset(Dataset):
     Relation:
         Default: id = idx + 1
         Always right: id = self.image_id[idx] (adopted)
+    Annotation format:
+        x1y1wh
     '''
-    def __init__(self, annotationPath, imgFilePath, config_data, task='train',
-                 ignored_input=False):
+    def __init__(self, annotationPath, imgFilePath, config_data, task='train'):
         super(CocoDataset, self).__init__()
         self.jsonPath = annotationPath
         self.imgPath = imgFilePath + "/"
         self.annotations = COCO(annotationPath)
         self.image_id = self.annotations.getImgIds()
-        self.ignored_input = ignored_input
         self.task = task
         self.config_data = config_data
+        self.ignored_input = config_data.ignored_input
         assert self.task in ['train', 'eval']
-        if task is 'eval':
+        if task == 'eval':
             self.ignored_input = False
 
-        self.normalizer = Normalizer()
-        self.general_argm = GeneralAugmenter(self.config_data)
-        self.resizer = Resizer(self.config_data)
+        self.normalizer = Normalizer(config_data)
+        self.general_argm = GeneralAugmenter(config_data)
+        self.resizer = Resizer(config_data)
 
     def __len__(self):
         return len(self.annotations.imgs)
@@ -51,20 +52,19 @@ class CocoDataset(Dataset):
         '''
         img, (w0, h0), img_id = self.load_img(idx)
         anns = self.load_anns(idx)
-
-        if self.task is 'train' and np.random.rand() < self.config_data.mosaic:
+        sample = {"img":img, "anns":anns, "id":img_id}
+        self.resizer(sample, w0, h0)
+        #self.normalizer(sample)
+        if self.task == 'train' and np.random.rand() < self.config_data.mosaic:
             pass
-
-        anns = self.annotations.getAnnIds(imgIds=self.image_id[idx])
-        anns = deepcopy(self.annotations.loadAnns(anns))
-
-        return {"img":img, "anns":anns, "id":img_id}
+        self.general_argm(sample)
+        return sample
 
     def load_img(self, idx):
         img = self.annotations.imgs[self.image_id[idx]]
         w0, h0, id = img["width"], img["height"], img["id"]
         img = cv2.imread(self.imgPath + img["file_name"] + ".jpg")
-        img = img[:,:,::-1]
+        img = img[:,:,::-1].astype(np.float32)
         return img, (w0, h0), id
 
     def load_anns(self, idx):

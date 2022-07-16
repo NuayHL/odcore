@@ -5,15 +5,28 @@ class CN(_CN):
     def __init__(self):
         super(CN, self).__init__()
 
+    def dump_to_file(self):
+        cfg_string = self.dump()
+        assert hasattr(self, 'name')
+        with open(self.name + '.yaml', "w") as f:
+            f.write(cfg_string)
+
+
 c = CN()
+c.name = 'yolov3'
+
 c.model = CN()
 c.model.backbone = 'darknet53'
 c.model.neck = 'yolov3'
 c.model.detector = 'yolov3'
 
 c.data = CN()
+c.data.input_mean = [0.46431773, 0.44211456, 0.4223358]
+c.data.input_std = [0.29044453, 0.28503336, 0.29363019]
 c.data.input_width = 640
 c.data.input_height = 640
+c.data.ignored_input = True
+
 c.data.hsv_h = 0.0138
 c.data.hsv_s = 0.664
 c.data.hsv_v = 0.464

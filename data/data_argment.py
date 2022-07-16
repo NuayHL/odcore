@@ -2,9 +2,9 @@ import numpy as np
 import cv2
 
 class Normalizer():
-    def __init__(self):
-        self.mean = np.array([0.46431773, 0.44211456, 0.4223358])
-        self.std = np.array([0.29044453, 0.28503336, 0.29363019])
+    def __init__(self, config_data):
+        self.mean = np.array(config_data.input_mean)
+        self.std = np.array(config_data.input_std)
     def __call__(self, sample):
         sample['img'] /= 255
         sample['img'] = (sample['img'] - self.mean)/self.std
