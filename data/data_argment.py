@@ -9,7 +9,6 @@ class Normalizer():
         sample['img'] /= 255
         sample['img'] = (sample['img'] - self.mean)/self.std
 
-
 class GeneralAugmenter():
     def __init__(self, config_data):
         self.fliplr = config_data.fliplr
