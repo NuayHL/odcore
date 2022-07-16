@@ -1,7 +1,22 @@
 import torch
 import math
 
-class IOUloss:
+class DetectionLoss():
+    def __init__(self, config):
+        
+    def __call__(self, dt, gt):
+        return 0
+
+class BCE():
+    def __init__(self, use_focal, reduction='none', eps=1e-7):
+        self.use_focal = use_focal
+        self.reduction = reduction
+        self.eps = eps
+    def __call__(self, dt_cls, gt_cls):
+
+
+
+class IOUloss():
     """ Calculate IoU loss.
         based on https://github.com/meituan/YOLOv6/blob/main/yolov6/models/loss.py
     """
