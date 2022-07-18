@@ -1,5 +1,5 @@
 from data.dataset import CocoDataset
-from visualization import dataset_inspection
+from utils.visualization import dataset_inspection
 from config import get_default_cfg
 cfg = get_default_cfg()
 
