@@ -4,8 +4,6 @@ import matplotlib.pyplot as plt
 import torch
 from functools import wraps
 
-from utils import progressbar
-
 # decorator for tran img
 def tran_img(fun):
     @wraps(fun)

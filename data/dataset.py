@@ -40,6 +40,7 @@ class CocoDataset(Dataset):
         self.normalizer = Normalizer(config_data)
         self.general_argm = GeneralAugmenter(config_data)
         self.resizer = Resizer(config_data)
+        self.letterbox = LetterBox(config_data)
 
     def __len__(self):
         return len(self.annotations.imgs)
@@ -53,9 +54,10 @@ class CocoDataset(Dataset):
         img, (w0, h0), img_id = self.load_img(idx)
         anns = self.load_anns(idx)
         sample = {"img":img, "anns":anns, "id":img_id}
-        self.resizer(sample, w0, h0)
         if self.task == 'train' and np.random.rand() < self.config_data.mosaic:
             pass
+
+        self.letterbox(sample)
         self.general_argm(sample)
         sample["img"] = sample["img"][:,:,::-1]
         sample["img"] = np.ascontiguousarray(sample["img"])

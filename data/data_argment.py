@@ -39,6 +39,41 @@ class GeneralAugmenter():
             cv2.cvtColor(im_hsv, cv2.COLOR_HSV2BGR, sample["img"])
 
 class LetterBox():
+    def __init__(self, config_data, color=(114,114,114),auto=True, scaleup=True, stride=32):
+        self.width = config_data.input_width
+        self.height = config_data.input_height
+        self.color = color
+        self.auto = auto
+        self.scaleup = scaleup
+        self.stride = stride
+    def __call__(self, sample):
+        # Resize and pad image while meeting stride-multiple constraints
+        shape = sample['img'].shape[:2]  # current shape [height, width]
+
+        # Scale ratio (new / old)
+        r = min(self.height / shape[0], self.width / shape[1])
+        if not self.scaleup:  # only scale down, do not scale up (for better val mAP)
+            r = min(r, 1.0)
+
+        # Compute padding
+        new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r))
+        dw, dh = self.width - new_unpad[0], self.height - new_unpad[1]  # wh padding
+
+        if self.auto:  # minimum rectangle
+            dw, dh = np.mod(dw, self.stride), np.mod(dh, self.stride)  # wh padding
+
+        dw /= 2  # divide padding into 2 sides
+        dh /= 2
+
+        if shape[::-1] != new_unpad:  # resize
+            sample['img'] = cv2.resize(sample['img'], new_unpad, interpolation=cv2.INTER_LINEAR)
+        top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
+        left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
+        sample['img'] = cv2.copyMakeBorder(sample['img'], top, bottom, left, right, cv2.BORDER_CONSTANT, value=self.color)  # add border
+
+        sample["anns"][:, :4] *= r
+        sample["anns"][:, 0] += dw
+        sample["anns"][:, 2] += dh
 
 class Resizer():
     def __init__(self, config_data):

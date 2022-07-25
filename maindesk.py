@@ -4,9 +4,9 @@ from config import get_default_cfg
 cfg = get_default_cfg()
 
 dataset = CocoDataset('CrowdHuman/annotation_val_coco_style.json','CrowdHuman/Images_val', config_data=cfg.data)
-dataset_inspection(dataset, 1000)
-dataset_inspection(dataset, 1000)
-dataset_inspection(dataset, 1000)
-dataset_inspection(dataset, 1000)
-dataset_inspection(dataset, 1000)
+dataset_inspection(dataset, 1001)
+dataset_inspection(dataset, 1001)
+dataset_inspection(dataset, 1001)
+dataset_inspection(dataset, 1001)
+dataset_inspection(dataset, 1001)
 
