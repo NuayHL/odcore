@@ -16,6 +16,7 @@ class GeneralAugmenter():
         self.hsv_s = config_data.hsv_s
         self.hsv_v = config_data.hsv_v
     def __call__(self, sample):
+        # horizontal flip
         if np.random.rand() < self.fliplr:
             sample["img"] = sample["img"][:,::-1,:]
 
@@ -36,6 +37,8 @@ class GeneralAugmenter():
 
             im_hsv = cv2.merge((cv2.LUT(hue, lut_hue), cv2.LUT(sat, lut_sat), cv2.LUT(val, lut_val)))
             cv2.cvtColor(im_hsv, cv2.COLOR_HSV2BGR, sample["img"])
+
+class LetterBox():
 
 class Resizer():
     def __init__(self, config_data):
