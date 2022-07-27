@@ -57,7 +57,7 @@ class CocoDataset(Dataset):
         if self.task == 'train' and np.random.rand() < self.config_data.mosaic:
             pass
 
-        self.letterbox(sample)
+        self.resizer(sample, w0,h0)
         self.general_argm(sample)
         sample["img"] = sample["img"][:,:,::-1]
         sample["img"] = np.ascontiguousarray(sample["img"])

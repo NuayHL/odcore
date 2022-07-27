@@ -95,6 +95,8 @@ def random_affine(img, labels=(), degrees=10, translate=.1, scale=.1, shear=10,
                   new_shape=(640, 640)):
 
     n = len(labels)
+    labels[:,2] += labels[:,0]
+    labels[:,3] += labels[:,1]
     height, width = new_shape
 
     M, s = get_transform_matrix(img.shape[:2], (height, width), degrees, scale, shear, translate)
@@ -106,7 +108,7 @@ def random_affine(img, labels=(), degrees=10, translate=.1, scale=.1, shear=10,
         new = np.zeros((n, 4))
 
         xy = np.ones((n * 4, 3))
-        xy[:, :2] = labels[:, [1, 2, 3, 4, 1, 4, 3, 2]].reshape(n * 4, 2)  # x1y1, x2y2, x1y2, x2y1
+        xy[:, :2] = labels[:, [0, 1, 2, 3, 0, 3, 2, 1]].reshape(n * 4, 2)  # x1y1, x2y2, x1y2, x2y1
         xy = xy @ M.T  # transform
         xy = xy[:, :2].reshape(n, 8)  # perspective rescale or affine
 
@@ -120,10 +122,12 @@ def random_affine(img, labels=(), degrees=10, translate=.1, scale=.1, shear=10,
         new[:, [1, 3]] = new[:, [1, 3]].clip(0, height)
 
         # filter candidates
-        i = box_candidates(box1=labels[:, 1:5].T * s, box2=new.T, area_thr=0.1)
+        i = box_candidates(box1=labels[:, 0:4].T * s, box2=new.T, area_thr=0.1)
         labels = labels[i]
-        labels[:, 1:5] = new[i]
+        labels[:, 0:4] = new[i]
 
+    labels[:,2] -= labels[:,0]
+    labels[:,3] -= labels[:,1]
     return img, labels
 
 def get_transform_matrix(img_shape, new_shape, degrees, scale, shear, translate):
@@ -154,6 +158,61 @@ def get_transform_matrix(img_shape, new_shape, degrees, scale, shear, translate)
     # Combined rotation matrix
     M = T @ S @ R @ C  # order of operations (right to left) is IMPORTANT
     return M, s
+
+def mosaic_augmentation(img_size, imgs, hs, ws, labels):
+
+    assert len(imgs) == 4, "Mosaic augmentation of current version only supports 4 images."
+
+    labels4 = []
+    s = img_size
+    yc, xc = (int(random.uniform(s//2, 3*s//2)) for _ in range(2))  # mosaic center x, y
+    for i in range(len(imgs)):
+        # Load image
+        img, h, w = imgs[i], hs[i], ws[i]
+        # place img in img4
+        if i == 0:  # top left
+            img4 = np.full((s * 2, s * 2, img.shape[2]), 114, dtype=np.uint8)  # base image with 4 tiles
+            x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h, 0), xc, yc  # xmin, ymin, xmax, ymax (large image)
+            x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h  # xmin, ymin, xmax, ymax (small image)
+        elif i == 1:  # top right
+            x1a, y1a, x2a, y2a = xc, max(yc - h, 0), min(xc + w, s * 2), yc
+            x1b, y1b, x2b, y2b = 0, h - (y2a - y1a), min(w, x2a - x1a), h
+        elif i == 2:  # bottom left
+            x1a, y1a, x2a, y2a = max(xc - w, 0), yc, xc, min(s * 2, yc + h)
+            x1b, y1b, x2b, y2b = w - (x2a - x1a), 0, w, min(y2a - y1a, h)
+        elif i == 3:  # bottom right
+            x1a, y1a, x2a, y2a = xc, yc, min(xc + w, s * 2), min(s * 2, yc + h)
+            x1b, y1b, x2b, y2b = 0, 0, min(w, x2a - x1a), min(y2a - y1a, h)
+
+        img4[y1a:y2a, x1a:x2a] = img[y1b:y2b, x1b:x2b]  # img4[ymin:ymax, xmin:xmax]
+        padw = x1a - x1b
+        padh = y1a - y1b
+
+        # Labels
+        labels_per_img = labels[i].copy()
+        if labels_per_img.size:
+            boxes = np.copy(labels_per_img[:, 0:4])
+            boxes[:, 0] = w * (labels_per_img[:, 0] - labels_per_img[:, 2] / 2) + padw  # top left x
+            boxes[:, 1] = h * (labels_per_img[:, 1] - labels_per_img[:, 3] / 2) + padh  # top left y
+            boxes[:, 2] = w * (labels_per_img[:, 0] + labels_per_img[:, 2] / 2) + padw  # bottom right x
+            boxes[:, 3] = h * (labels_per_img[:, 1] + labels_per_img[:, 3] / 2) + padh  # bottom right y
+            labels_per_img[:, 0:4] = boxes
+
+        labels4.append(labels_per_img)
+
+    # Concat/clip labels
+    labels4 = np.concatenate(labels4, 0)
+    for x in (labels4[:, 1:]):
+        np.clip(x, 0, 2 * s, out=x)
+
+    # Augment
+    # img4, labels4 = random_affine(img4, labels4,
+    #                               degrees=hyp['degrees'],
+    #                               translate=hyp['translate'],
+    #                               scale=hyp['scale'],
+    #                               shear=hyp['shear'])
+
+    return img4, labels4
 
 def box_candidates(box1, box2, wh_thr=2, ar_thr=20, area_thr=0.1, eps=1e-16):  # box1(4,n), box2(4,n)
     # Compute candidate boxes: box1 before augment, box2 after augment, wh_thr (pixels), aspect_ratio_thr, area_ratio
