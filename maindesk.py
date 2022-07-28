@@ -6,8 +6,8 @@ from data.data_augment import *
 cfg = get_default_cfg()
 
 dataset = CocoDataset('CrowdHuman/annotation_val_coco_style.json','CrowdHuman/Images_val', config_data=cfg.data,
-                      task='val')
-dataset_inspection(dataset, 991, anntype='x1y1wh')
+                      task='train')
+dataset_inspection(dataset, 1110, anntype='x1y1wh')
 
 # samples = [dataset[990],dataset[990],dataset[990],dataset[990]]
 # imgs = [sample['img'] for sample in samples]

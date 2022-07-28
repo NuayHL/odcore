@@ -53,8 +53,8 @@ class CocoDataset(Dataset):
     def __getitem__(self, idx):
         '''
         base output:
-            sample['img'] = whc np.int32? img
-            sample['anns] = n x (x1 y1 w h c) np.int32 img
+            sample['img'] = whc np.uint8 img
+            sample['anns] = n x (x1 y1 w h c) np.float32 img
         '''
         sample = self.load_sample(idx)
 
