@@ -1,3 +1,5 @@
+import random
+
 import cv2
 import os
 import numpy as np
@@ -32,6 +34,8 @@ class CocoDataset(Dataset):
         self.image_id = self.annotations.getImgIds()
         self.task = task
         self.config_data = config_data
+        self.img_size = (config_data.input_width, config_data.input_height)
+        self.lenth = len(self.annotations.imgs)
         self.ignored_input = config_data.ignored_input
         assert self.task in ['train', 'eval']
         if task == 'eval':
@@ -43,7 +47,7 @@ class CocoDataset(Dataset):
         self.letterbox = LetterBox(config_data)
 
     def __len__(self):
-        return len(self.annotations.imgs)
+        return self.lenth
 
     def __getitem__(self, idx):
         '''
@@ -51,16 +55,28 @@ class CocoDataset(Dataset):
             sample['img'] = whc np.int32? img
             sample['anns] = n x (x1 y1 w h c) np.int32 img
         '''
-        img, (w0, h0), img_id = self.load_img(idx)
-        anns = self.load_anns(idx)
-        sample = {"img":img, "anns":anns, "id":img_id}
-        if self.task == 'train' and np.random.rand() < self.config_data.mosaic:
-            pass
+        sample = self.load_sample(idx)
 
-        self.resizer(sample, w0,h0)
-        self.general_argm(sample)
+        if self.task == 'train' and random.random() < self.config_data.mosaic:
+            self.get_mosaic(sample)
+            if random.random() < self.config_data.mixup:
+                self.get_mixup(sample)
+        else:
+            self.letterbox(sample)
+            if self.task == 'train':
+                pass #random affine
+
+        if self.task == 'train':
+            self.general_argm(sample)
         sample["img"] = sample["img"][:,:,::-1]
         sample["img"] = np.ascontiguousarray(sample["img"])
+        return sample
+
+    def load_sample(self,idx):
+        img, shape, id = self.load_img(idx)
+        anns = self.load_anns(idx)
+        sample = {"img": img, "anns": anns, "id": id, 'shape':shape}
+        self.resizer(sample)
         return sample
 
     def load_img(self, idx):
@@ -75,8 +91,24 @@ class CocoDataset(Dataset):
         anns = np.array(anns, dtype=np.float32)
         return anns
 
-    def get_mosaic(self, idx):
-        pass
+    def get_mosaic(self, sample):
+        idxs = random.choices(range(len(self)), k=3)
+        random.shuffle(idxs)
+        imgs, labels, ws, hs = [sample['img']], [sample['anns']], [sample['img'].shape[1]], [sample['img'].shape[0]]
+        for index in idxs:
+            sample_i = self.load_sample(index)
+            imgs.append(sample_i['img'])
+            labels.append(sample_i['anns'])
+            ws.append(sample_i['img'].shape[1])
+            hs.append(sample_i['img'].shape[0])
+        img4, anns4 = mosaic_augmentation(self.img_size, imgs, hs, ws, labels, self.config_data)
+        sample['img'] = img4
+        sample['anns'] = anns4
+
+    def get_mixup(self, sample):
+        sample2 = self.load_sample(random.randint(0, len(self) - 1))
+        self.get_mosaic(sample2)
+        mix_up(sample, sample2)
 
     @staticmethod
     def OD_default_collater(data):
