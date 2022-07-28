@@ -2,11 +2,12 @@ from data.dataset import CocoDataset
 from utils.visualization import dataset_inspection, show_bbox
 from utils.misc import *
 from config import get_default_cfg
-from data.data_argment import *
+from data.data_augment import *
 cfg = get_default_cfg()
 
-dataset = CocoDataset('CrowdHuman/annotation_val_coco_style.json','CrowdHuman/Images_val', config_data=cfg.data)
-dataset_inspection(dataset, 990, anntype='x1y1wh')
+dataset = CocoDataset('CrowdHuman/annotation_val_coco_style.json','CrowdHuman/Images_val', config_data=cfg.data,
+                      task='val')
+dataset_inspection(dataset, 991, anntype='x1y1wh')
 
 # samples = [dataset[990],dataset[990],dataset[990],dataset[990]]
 # imgs = [sample['img'] for sample in samples]

@@ -1,5 +1,4 @@
 import random
-
 import cv2
 import os
 import numpy as np
@@ -8,12 +7,14 @@ from pycocotools.coco import COCO
 from copy import deepcopy
 from torch.utils.data import Dataset
 
-from .data_argment import *
-
-"""
-dataset output:
-    {'img': }
-"""
+from .data_augment import (
+    GeneralAugmenter,
+    Resizer,
+    RandomAffine,
+    LetterBox,
+    Mosaic,
+    mix_up
+)
 
 class CocoDataset(Dataset):
     '''
@@ -34,17 +35,17 @@ class CocoDataset(Dataset):
         self.image_id = self.annotations.getImgIds()
         self.task = task
         self.config_data = config_data
-        self.img_size = (config_data.input_width, config_data.input_height)
         self.lenth = len(self.annotations.imgs)
         self.ignored_input = config_data.ignored_input
-        assert self.task in ['train', 'eval']
-        if task == 'eval':
+        assert self.task in ['train', 'val']
+        if task == 'val':
             self.ignored_input = False
 
-        self.normalizer = Normalizer(config_data)
-        self.general_argm = GeneralAugmenter(config_data)
+        self.random_affine = RandomAffine(config_data)
+        self.mosaic = Mosaic(config_data)
+        self.general_augment = GeneralAugmenter(config_data)
         self.resizer = Resizer(config_data)
-        self.letterbox = LetterBox(config_data)
+        self.letterbox = LetterBox(config_data, auto=False, scaleup=(self.task == 'train'))
 
     def __len__(self):
         return self.lenth
@@ -64,10 +65,10 @@ class CocoDataset(Dataset):
         else:
             self.letterbox(sample)
             if self.task == 'train':
-                pass #random affine
+                self.random_affine(sample)
 
         if self.task == 'train':
-            self.general_argm(sample)
+            self.general_augment(sample)
         sample["img"] = sample["img"][:,:,::-1]
         sample["img"] = np.ascontiguousarray(sample["img"])
         return sample
@@ -101,7 +102,7 @@ class CocoDataset(Dataset):
             labels.append(sample_i['anns'])
             ws.append(sample_i['img'].shape[1])
             hs.append(sample_i['img'].shape[0])
-        img4, anns4 = mosaic_augmentation(self.img_size, imgs, hs, ws, labels, self.config_data)
+        img4, anns4 = self.mosaic(imgs, hs, ws, labels)
         sample['img'] = img4
         sample['anns'] = anns4
 
@@ -122,7 +123,8 @@ class CocoDataset(Dataset):
         imgs = torch.stack([torch.from_numpy(np.transpose(s["img"], (2, 0, 1))) for s in data])
         annos = [s["anns"] for s in data]
         ids = [s["id"] for s in data]
-        return {"imgs": imgs, "anns": annos, "ids":ids}
+        shapes = [s["shape"] for s in data]
+        return {"imgs": imgs, "annss": annos, "ids":ids, "shapes":shapes}
 
 class MixCocoDatset(Dataset):
     """
@@ -210,9 +212,8 @@ def load_single_inferencing_img(img, device):
     else:
         raise NotImplementedError("Unknown inputType")
 
-    img = (cv2.resize(img.astype(np.float32), (cfg.input_width, cfg.input_height)))/255
     img = np.transpose(img,(2,0,1))
-    img = preprocess_train(torch.from_numpy(img).float())
+    img = torch.from_numpy(img).float()
     img = torch.unsqueeze(img, dim=0)
     return img.to(device)
 

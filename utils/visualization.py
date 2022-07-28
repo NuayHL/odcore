@@ -42,6 +42,7 @@ def dataset_assign_inspection(dataset, imgid, annsidx=None):
 
 @tran_img
 def show_bbox(img, bboxs=[], type="xywh",color=[0,0,255],score=None, **kwargs):
+    print(len(bboxs))
     img = _add_bbox_img(img, bboxs=bboxs, type=type,color=color,score=score, **kwargs)
     printImg(img)
 

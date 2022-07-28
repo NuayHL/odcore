@@ -15,16 +15,25 @@ class Normalizer():
 class GeneralAugmenter():
     def __init__(self, config_data):
         self.fliplr = config_data.fliplr
+        self.flipud = config_data.flipud
         self.hsv_h = config_data.hsv_h
         self.hsv_s = config_data.hsv_s
         self.hsv_v = config_data.hsv_v
     def __call__(self, sample):
         # horizontal flip
-        if np.random.rand() < self.fliplr:
+        if random.random() < self.fliplr:
             sample["img"] = sample["img"][:,::-1,:]
 
             _, width, _ = sample["img"].shape
             sample["anns"][:, 0] = width - sample["anns"][:, 0] - sample["anns"][:, 2]
+            sample["img"] = np.ascontiguousarray(sample["img"])
+
+        # up-down flip
+        if random.random() < self.flipud:
+            sample["img"] = sample["img"][::-1,:,:]
+
+            height, _, _ = sample["img"].shape
+            sample["anns"][:, 1] = height - sample["anns"][:, 1] - sample["anns"][:, 3]
             sample["img"] = np.ascontiguousarray(sample["img"])
 
         # HSV color-space augmentation
@@ -42,7 +51,7 @@ class GeneralAugmenter():
             cv2.cvtColor(im_hsv, cv2.COLOR_HSV2BGR, sample["img"])
 
 class LetterBox():
-    def __init__(self, config_data, color=(114,114,114),auto=True, scaleup=True, stride=32):
+    def __init__(self, config_data, color=(114,114,114),auto=False, scaleup=True, stride=32):
         self.width = config_data.input_width
         self.height = config_data.input_height
         self.color = color
@@ -70,13 +79,13 @@ class LetterBox():
 
         if shape[::-1] != new_unpad:  # resize
             sample['img'] = cv2.resize(sample['img'], new_unpad, interpolation=cv2.INTER_LINEAR)
+            sample["anns"][:, :4] *= r
         top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
         left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
         sample['img'] = cv2.copyMakeBorder(sample['img'], top, bottom, left, right, cv2.BORDER_CONSTANT, value=self.color)  # add border
 
-        sample["anns"][:, :4] *= r
         sample["anns"][:, 0] += dw
-        sample["anns"][:, 2] += dh
+        sample["anns"][:, 1] += dh
 
 class Resizer():
     def __init__(self, config_data):
@@ -92,45 +101,99 @@ class Resizer():
                 sample['img'],
                 (int(float(sample['shape'][0]) * f), int(float(sample['shape'][1]) * f)),
                 interpolation=cv2.INTER_AREA
-                if f < 1 else cv2.INTER_LINEAR
-            )
+                if f < 1 else cv2.INTER_LINEAR)
 
-def random_affine(img, labels=(), degrees=10, translate=.1, scale=.1, shear=10,
-                  new_shape=(640, 640)):
+class RandomAffine():
+    def __init__(self, config_data):
+        self.degrees = config_data.degrees
+        self.scale = config_data.scale
+        self.shear = config_data.shear
+        self.translate = config_data.translate
+        self.img_size = (config_data.input_width, config_data.input_height)
+    def __call__(self, sample):
+        n = len(sample['anns'])
+        M, s = get_transform_matrix(sample['img'].shape[:2],
+                                    (self.img_size[1], self.img_size[0]),
+                                    self.degrees,
+                                    self.scale,
+                                    self.shear,
+                                    self.translate)
+        if (M != np.eye(3)).any():  # image changed
+            sample['img'] = cv2.warpAffine(sample['img'], M[:2], dsize=self.img_size, borderValue=(114, 114, 114))
 
-    n = len(labels)
-    height, width = new_shape
+        # Transform label coordinates
+        if n:
+            x1y1wh_x1y1x2y2_(sample['anns'])
+            xy = np.ones((n * 4, 3))
+            xy[:, :2] = sample['anns'][:, [0, 1, 2, 3, 0, 3, 2, 1]].reshape(n * 4, 2)  # x1y1, x2y2, x1y2, x2y1
+            xy = xy @ M.T  # transform
+            xy = xy[:, :2].reshape(n, 8)  # perspective rescale or affine
 
-    M, s = get_transform_matrix(img.shape[:2], (height, width), degrees, scale, shear, translate)
-    if (M != np.eye(3)).any():  # image changed
-        img = cv2.warpAffine(img, M[:2], dsize=(width, height), borderValue=(114, 114, 114))
+            # create new boxes
+            x = xy[:, [0, 2, 4, 6]]
+            y = xy[:, [1, 3, 5, 7]]
+            new = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
 
-    # Transform label coordinates
-    if n:
-        new = np.zeros((n, 4))
+            # clip
+            new[:, [0, 2]] = new[:, [0, 2]].clip(0, self.img_size[0])
+            new[:, [1, 3]] = new[:, [1, 3]].clip(0, self.img_size[0])
 
-        xy = np.ones((n * 4, 3))
-        xy[:, :2] = labels[:, [0, 1, 2, 3, 0, 3, 2, 1]].reshape(n * 4, 2)  # x1y1, x2y2, x1y2, x2y1
-        xy = xy @ M.T  # transform
-        xy = xy[:, :2].reshape(n, 8)  # perspective rescale or affine
+            # filter candidates
+            i = box_candidates(box1=sample['anns'][:, 0:4].T * s, box2=new.T, area_thr=0.1)
+            sample['anns'] = sample['anns'][i]
+            sample['anns'][:, 0:4] = new[i]
 
-        # create new boxes
-        x = xy[:, [0, 2, 4, 6]]
-        y = xy[:, [1, 3, 5, 7]]
-        new = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
+        x1y1x2y2_x1y1wh_(sample['anns'])
 
-        # clip
-        new[:, [0, 2]] = new[:, [0, 2]].clip(0, width)
-        new[:, [1, 3]] = new[:, [1, 3]].clip(0, height)
+class Mosaic():
+    def __init__(self, config_data):
+        self.img_size = (config_data.input_width, config_data.input_height)
+        self.random_affine = RandomAffine(config_data)
 
-        # filter candidates
-        i = box_candidates(box1=labels[:, 0:4].T * s, box2=new.T, area_thr=0.1)
-        labels = labels[i]
-        labels[:, 0:4] = new[i]
+    def __call__(self,imgs, hs, ws, labels):
+        '''img_size: w, h'''
+        assert len(imgs) == 4, "Mosaic augmentation of current version only supports 4 images."
+        labels4 = []
+        xc, yc = (int(random.uniform(self.img_size[0] // 2, 3 * self.img_size[0] // 2)),
+                  int(random.uniform(self.img_size[1] // 2, 3 * self.img_size[1] // 2)))  # mosaic center x, y
+        img4 = np.full((self.img_size[1] * 2, self.img_size[0] * 2, 3), 114, dtype=np.uint8)  # base image with 4 tiles
+        for i in range(4):
+            # Load image
+            img, h, w = imgs[i], hs[i], ws[i]
+            # place img in img4
+            if i == 0:  # top left
+                x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h,
+                                                         0), xc, yc  # xmin, ymin, xmax, ymax (out image location)
+                x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h  # xmin, ymin, xmax, ymax (crop ori image)
+            elif i == 1:  # top right
+                x1a, y1a, x2a, y2a = xc, max(yc - h, 0), min(xc + w, self.img_size[0] * 2), yc
+                x1b, y1b, x2b, y2b = 0, h - (y2a - y1a), min(w, x2a - x1a), h
+            elif i == 2:  # bottom left
+                x1a, y1a, x2a, y2a = max(xc - w, 0), yc, xc, min(self.img_size[1] * 2, yc + h)
+                x1b, y1b, x2b, y2b = w - (x2a - x1a), 0, w, min(y2a - y1a, h)
+            else:  # bottom right
+                x1a, y1a, x2a, y2a = xc, yc, min(xc + w, self.img_size[0] * 2), min(self.img_size[1] * 2, yc + h)
+                x1b, y1b, x2b, y2b = 0, 0, min(w, x2a - x1a), min(y2a - y1a, h)
+            img4[y1a:y2a, x1a:x2a] = img[y1b:y2b, x1b:x2b]  # img4[ymin:ymax, xmin:xmax]
+            padw = x1a - x1b
+            padh = y1a - y1b
 
-    labels[:,2] -= labels[:,0]
-    labels[:,3] -= labels[:,1]
-    return img, labels
+            # Labels
+            labels[i][:, 0] += padw  # top left x
+            labels[i][:, 1] += padh  # top left y
+            boxes = x1y1wh_x1y1x2y2(labels[i])
+            labels4.append(boxes)
+
+        # Concat/clip labels
+        labels4 = np.concatenate(labels4, 0)
+        labels4[:, [0, 2]] = labels4[:, [0, 2]].clip(0, 2 * self.img_size[0])
+        labels4[:, [1, 3]] = labels4[:, [1, 3]].clip(0, 2 * self.img_size[1])
+        x1y1x2y2_x1y1wh_(labels4)
+        sim_sample = {'img':img4, 'anns':labels4}
+        # Augment
+        self.random_affine(sim_sample)
+
+        return sim_sample['img'], sim_sample['anns']
 
 def get_transform_matrix(img_shape, new_shape, degrees, scale, shear, translate):
     new_height, new_width = new_shape
@@ -160,58 +223,6 @@ def get_transform_matrix(img_shape, new_shape, degrees, scale, shear, translate)
     # Combined rotation matrix
     M = T @ S @ R @ C  # order of operations (right to left) is IMPORTANT
     return M, s
-
-def mosaic_augmentation(img_size, imgs, hs, ws, labels, config_data):
-    '''img_size: w, h'''
-    assert len(imgs) == 4, "Mosaic augmentation of current version only supports 4 images."
-
-    labels4 = []
-    xc, yc = (int(random.uniform(img_size[0]//2, 3*img_size[0]//2)),
-              int(random.uniform(img_size[1]//2, 3*img_size[1]//2)))  # mosaic center x, y
-    print(xc,yc)
-    img4 = np.full((img_size[1] * 2, img_size[0] * 2, 3), 114, dtype=np.uint8)  # base image with 4 tiles
-    for i in range(4):
-        # Load image
-        img, h, w = imgs[i], hs[i], ws[i]
-        # place img in img4
-        if i == 0:  # top left
-            x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h, 0), xc, yc  # xmin, ymin, xmax, ymax (out image location)
-            x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h  # xmin, ymin, xmax, ymax (crop ori image)
-        elif i == 1:  # top right
-            x1a, y1a, x2a, y2a = xc, max(yc - h, 0), min(xc + w, img_size[0] * 2), yc
-            x1b, y1b, x2b, y2b = 0, h - (y2a - y1a), min(w, x2a - x1a), h
-        elif i == 2:  # bottom left
-            x1a, y1a, x2a, y2a = max(xc - w, 0), yc, xc, min(img_size[1] * 2, yc + h)
-            x1b, y1b, x2b, y2b = w - (x2a - x1a), 0, w, min(y2a - y1a, h)
-        else:  # bottom right
-            x1a, y1a, x2a, y2a = xc, yc, min(xc + w, img_size[0] * 2), min(img_size[1] * 2, yc + h)
-            x1b, y1b, x2b, y2b = 0, 0, min(w, x2a - x1a), min(y2a - y1a, h)
-        img4[y1a:y2a, x1a:x2a] = img[y1b:y2b, x1b:x2b]  # img4[ymin:ymax, xmin:xmax]
-        padw = x1a - x1b
-        padh = y1a - y1b
-
-        # Labels
-        boxes = x1y1wh_x1y1x2y2(labels[i])
-        if boxes.size:
-            boxes[:, 0] += padw  # top left x
-            boxes[:, 1] += padh  # top left y
-            boxes[:, 2] += padw  # bottom right x
-            boxes[:, 3] += padh  # bottom right y
-        labels4.append(boxes)
-
-    # Concat/clip labels
-    labels4 = np.concatenate(labels4, 0)
-    labels4[:, [0, 2]] = labels4[:, [0, 2]].clip(0, 2 * img_size[0])
-    labels4[:, [1, 3]] = labels4[:, [1, 3]].clip(0, 2 * img_size[1])
-
-    # Augment
-    img4, labels4 = random_affine(img4, labels4,
-                                  degrees=config_data.degrees,
-                                  translate=config_data.translate,
-                                  scale=config_data.scale,
-                                  shear=config_data.shear)
-
-    return img4, labels4
 
 def box_candidates(box1, box2, wh_thr=2, ar_thr=20, area_thr=0.1, eps=1e-16):  # box1(4,n), box2(4,n)
     # Compute candidate boxes: box1 before augment, box2 after augment, wh_thr (pixels), aspect_ratio_thr, area_ratio
