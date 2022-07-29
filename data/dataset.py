@@ -32,8 +32,8 @@ class CocoDataset(Dataset):
         self.jsonPath = annotationPath
         self.imgPath = imgFilePath + "/"
         self.annotations = COCO(annotationPath)
-        self.image_id = self.annotations.getImgIds()
         self.task = task
+        self.image_id = self.annotations.getImgIds()
         self.config_data = config_data
         self.lenth = len(self.annotations.imgs)
         self.ignored_input = config_data.ignored_input
