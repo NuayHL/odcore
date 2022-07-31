@@ -1,13 +1,22 @@
-from data.dataset import CocoDataset
-from utils.visualization import dataset_inspection, show_bbox
-from utils.misc import *
-from config import get_default_cfg
-from data.data_augment import *
-cfg = get_default_cfg()
+from testtools import *
 
-dataset = CocoDataset('CrowdHuman/annotation_val_coco_style.json','CrowdHuman/Images_val', config_data=cfg.data,
-                      task='train')
-dataset_inspection(dataset, 1110, anntype='x1y1wh')
+
+model = DummyModel().cuda()
+op = optim.SGD(model.parameters(),lr=1)
+sc = scheduler.MultiStepLR(op,[5,10],gamma=0.1)
+op.zero_grad()
+
+
+opdict = op.state_dict()
+scdict = sc.state_dict()
+print(opdict.keys())
+print(opdict)
+print(scdict.keys())
+print(scdict)
+
+# dataset = CocoDataset('CrowdHuman/annotation_val_coco_style.json','CrowdHuman/Images_val', config_data=cfg.data,
+#                       task='train')
+# dataset_inspection(dataset, 1110, anntype='x1y1wh')
 
 # samples = [dataset[990],dataset[990],dataset[990],dataset[990]]
 # imgs = [sample['img'] for sample in samples]

@@ -6,8 +6,6 @@ class GeneralLoss():
     '''
     reg loss: smooth l1
     cls loss: bce + focal
-    {"imgs":List lenth B, each with np.float32 img
-     "anns":List lenth B, each with np.float32 ann}
     '''
     def __init__(self, config, args, rank):
         self.config = config

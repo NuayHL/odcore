@@ -13,7 +13,7 @@ class CN(_CN):
 
 
 c = CN()
-c.name = 'yolov3'
+c.exp_name = 'yolov3'
 
 c.model = CN()
 c.model.backbone = 'darknet53'
