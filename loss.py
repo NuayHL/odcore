@@ -2,21 +2,6 @@ import torch
 import math
 import torch.nn as nn
 
-class DetectionLoss():
-    def __init__(self, config):
-        pass
-    def __call__(self, dt, gt):
-        return 0
-
-class BCE():
-    def __init__(self, use_focal, reduction='none', eps=1e-7):
-        self.use_focal = use_focal
-        self.reduction = reduction
-        self.eps = eps
-    def __call__(self, dt_cls, gt_cls):
-
-        pass
-
 class GeneralLoss():
     '''
     reg loss: smooth l1
@@ -24,33 +9,28 @@ class GeneralLoss():
     {"imgs":List lenth B, each with np.float32 img
      "anns":List lenth B, each with np.float32 ann}
     '''
-    def __init__(self, config, rank):
+    def __init__(self, config, args, rank):
+        self.config = config
+        self.args = args
+        self.loss_parse()
+        self.usefocal = config.training.loss.use_focal
+        if self.usefocal:
+            self.alpha = config.training.loss.focal_alpha
+            self.gamma = config.training.loss.focal_gamma
+        self.device = rank if rank != -1 else 'cuda'
 
-        self.label_assignment = assign_method(config=config, device=device, using_ignored_input=use_ignore)
-        if isinstance(anchors, np.ndarray):
-            anchors = torch.from_numpy(anchors)
-        self.anchs = anchors
-        self.iouloss = IOUloss(iou_type= iou_type, reduction='sum')
-        if device is None:
-            self.device = config.pre_device
-        else:
-            self.device = device
+    def loss_parse(self):
+        self.reg_loss = []
+        reg_loss_type = self.config.training.loss.reg_type
+        for method in reg_loss_type:
+            if method in ['ciou', 'diou', 'giou', 'siou']:
+                self.reg_loss.append(IOUloss(iou_type=method, bbox_type='x1y1wh'))
+            if method in ['l1']:
+                self.reg_loss.append(SmoothL1())
 
-        self._pre_anchor()
-        self.alpha = 0.25
-        self.gamma = 2.0
-        self.usefocal = use_focal
-        self.useignore = use_ignore
+        self.cls_loss = BCE()
 
-    def _pre_anchor(self):
-        if torch.cuda.is_available():
-            self.anchs = self.anchs.to(self.device)
-        self.anch_w = self.anchs[:, 2] - self.anchs[:, 0]
-        self.anch_h = self.anchs[:, 3] - self.anchs[:, 1]
-        self.anch_x = self.anchs[:, 0] + 0.5 * self.anch_w
-        self.anch_y = self.anchs[:, 1] + 0.5 * self.anch_h
-
-    def __call__(self, cls_dt, reg_dt, gt):
+    def __call__(self, cls_dt, reg_dt, obj_dt, cls_gt, reg_gt, obj_gt):
         '''
         dt: The input dt should be the same format as assign result
             i.e.  Tensor: Batchsize X (4+1+classes) X samples
@@ -153,6 +133,27 @@ class GeneralLoss():
         # print('cls loss:%.8f'%cls_loss, 'bbox loss:%.4f'%bbox_loss)
         loss = torch.add(bbox_loss,cls_loss)
         return loss/self.batch_size
+
+class DetectionLoss():
+    def __init__(self, config):
+        pass
+    def __call__(self, dt, gt):
+        return 0
+
+class BCE():
+    def __init__(self, use_focal, reduction='none', eps=1e-7):
+        self.use_focal = use_focal
+        self.reduction = reduction
+        self.eps = eps
+    def __call__(self, dt_cls, gt_cls):
+
+        pass
+
+class SmoothL1():
+    def __init__(self):
+        pass
+    def __call__(self, *args, **kwargs):
+        pass
 
 class IOUloss():
     """ Calculate IoU loss.

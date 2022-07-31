@@ -67,7 +67,9 @@ c.training.optimizer.betas = (0.9, 0.999)   #AdamW
 c.training.loss = CN()
 c.training.loss.reg_type = ['giou','l1']
 c.training.loss.cls_type = 'bce'
-c.training.loss.usefocal = False
+c.training.loss.use_focal = False
+c.training.loss.focal_alpha = 0.25
+c.training.loss.focal_gamma = 2.0
 
 
 c.inference = CN()
