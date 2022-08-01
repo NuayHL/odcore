@@ -1,17 +1,19 @@
 import math
 import torch
 import torch.nn as nn
+from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 import numpy as np
 import os
 import yaml
 import torch.optim as optim
 
+import config
 from config import CN
 from data.dataloader import build_dataloader
 from utils.ema import ModelEMA
 from utils.exp_storage import mylogger
-from utils.misc import tensorInDict2device
+from utils.misc import progressbar
 
 class Train():
     main_log_storage_path = 'running_log'
@@ -81,8 +83,17 @@ class Train():
         self.train()
 
     def train(self):
-        self.model.train()
-        self.optimizer.zero_grad()
+        itr_in_epoch = len(self.train_loader)
+        for epoch in range(self.start_epoch, self.final_epoch + 1):
+            self.model.train()
+            if self.rank != -1:
+                self.train_loader.sampler.set_epoch(epoch)
+            for i, samples in enumerate(self.train_loader):
+                samples['imgs'] = samples['imgs'].to(self.device).float() / 255
+                samples['annss'] = samples['annss'].to(self.device)
+                loss, loss_dict = self.model(samples)
+                progressbar(i/float(itr_in_epoch), endstr=)
+
 
     def val(self):
         self.model.eval()
@@ -157,21 +168,34 @@ class Train():
                                              'train')
 
     def build_val_dataloader(self):
-        self.val_laoder = build_dataloader(self.config.training.val_img_anns_path,
-                                           self.config.training.val_img_path,
-                                           self.config.data,
-                                           self.batchsize, self.rank, self.args.workers,
-                                           'val')
+        if self.is_main_process:
+            self.val_laoder = build_dataloader(self.config.training.val_img_anns_path,
+                                               self.config.training.val_img_path,
+                                               self.config.data,
+                                               self.batchsize, -1, self.args.workers,
+                                               'val')
 
     def build_optimizer(self):
+        config_opt = self.config.training.optimizer
+
+        g_bnw, g_w, g_b = [], [], []
+        for v in self.model.modules():
+            if hasattr(v, 'bias') and isinstance(v.bias, nn.Parameter):
+                g_b.append(v.bias)
+            if isinstance(v, nn.BatchNorm2d):
+                g_bnw.append(v.weight)
+            elif hasattr(v, 'weight') and isinstance(v.weight, nn.Parameter):
+                g_w.append(v.weight)
 
         if self.config.training.optimizer.type.lower() == 'sgd':
-            self.optimizer = optim.SGD(self.model.parameters(),
-                                  lr = self.config.training.optimizer.lr)
+            self.optimizer = optim.SGD(g_bnw, lr = config_opt.lr, momentum=config_opt.momentum, nesterov=True)
         elif self.config.training.optimizer.type.lower() == 'adam':
-            self.optimizer = optim.AdamW(self.model.parameters(),)
+            self.optimizer = optim.Adam(g_bnw, lr = config_opt.lr, betas=(config_opt.momentum, 0.999))
         else:
             raise NotImplementedError
+
+        self.optimizer.add_param_group({'params': g_w, 'weight_decay': config_opt.weight_decay})
+        self.optimizer.add_param_group({'params': g_b})
 
     def build_scheduler(self):
         if not hasattr(self, 'optimizer'):

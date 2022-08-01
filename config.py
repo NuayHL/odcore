@@ -66,9 +66,8 @@ c.training.final_epoch = 200
 c.training.optimizer = CN()
 c.training.optimizer.type = 'SGD'
 c.training.optimizer.lr = 0.01
-c.training.optimizer.weight_decay = 0.001
-c.training.optimizer.momentum = 0.001       #SGD
-c.training.optimizer.betas = (0.9, 0.999)   #AdamW
+c.training.optimizer.weight_decay = 0.0005
+c.training.optimizer.momentum = 0.937       #SGD
 
 c.training.schedular = CN()
 c.training.schedular.type = 'cosine'
