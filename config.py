@@ -5,7 +5,6 @@ from yacs.config import CfgNode as _CN
 class CN(_CN):
     def __init__(self):
         super(CN, self).__init__()
-
     def dump_to_file(self, yaml_name=None, path=''):
         cfg_string = self.dump()
         if yaml_name is None:
@@ -19,11 +18,6 @@ class CN(_CN):
 
 c = CN()
 c.exp_name = 'yolov3'
-
-c.model = CN()
-c.model.backbone = 'darknet53'
-c.model.neck = 'yolov3'
-c.model.detector = 'standard_yolo'
 
 c.data = CN()
 c.data.input_mean = [0.46431773, 0.44211456, 0.4223358]
@@ -47,15 +41,6 @@ c.data.mixup = 0.243
 
 c.training = CN()
 
-c.training.use_anchor = False
-# if using anchor
-c.training.fpnlevels = [3, 4, 5]
-c.training.ratios = [2, 4]
-c.training.scales = [0.75, 1]
-# if not using anchor
-
-c.training.assignment = 'default'
-
 c.training.train_img_path = ''
 c.training.train_img_anns_path = ''
 c.training.val_img_path = ''
@@ -72,17 +57,6 @@ c.training.optimizer.momentum = 0.937       #SGD
 c.training.schedular = CN()
 c.training.schedular.type = 'cosine'
 c.training.schedular.lrf = 0.01
-
-
-c.training.loss = CN()
-c.training.loss.reg_type = ['giou','l1']
-c.training.loss.cls_type = 'bce'
-c.training.loss.use_focal = False
-c.training.loss.focal_alpha = 0.25
-c.training.loss.focal_gamma = 2.0
-
-
-c.inference = CN()
 
 def get_default_cfg():
     return c.clone()

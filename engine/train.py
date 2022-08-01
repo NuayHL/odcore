@@ -92,7 +92,7 @@ class Train():
                 samples['imgs'] = samples['imgs'].to(self.device).float() / 255
                 samples['annss'] = samples['annss'].to(self.device)
                 loss, loss_dict = self.model(samples)
-                progressbar(i/float(itr_in_epoch), endstr=)
+                progressbar(i/float(itr_in_epoch), endstr='')
 
 
     def val(self):
