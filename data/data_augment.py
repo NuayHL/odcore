@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import random
 import math
-from utils.misc import *
+from ..utils.misc import *
 
 class Normalizer():
     def __init__(self, config_data):
