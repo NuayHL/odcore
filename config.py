@@ -1,14 +1,19 @@
 import yaml
+import os
 from yacs.config import CfgNode as _CN
 
 class CN(_CN):
     def __init__(self):
         super(CN, self).__init__()
 
-    def dump_to_file(self):
+    def dump_to_file(self, yaml_name=None, path=''):
         cfg_string = self.dump()
-        assert hasattr(self, 'name')
-        with open(self.name + '.yaml', "w") as f:
+        if yaml_name is None:
+            assert hasattr(self, 'exp_name')
+            file_name = self.exp_name
+        else:
+            file_name = yaml_name
+        with open(os.path.join(path,file_name + '.yaml'), "w") as f:
             f.write(cfg_string)
 
 
@@ -56,13 +61,19 @@ c.training.train_img_anns_path = ''
 c.training.val_img_path = ''
 c.training.val_img_anns_path = ''
 c.training.batch_size = 8
+c.training.final_epoch = 200
 
 c.training.optimizer = CN()
 c.training.optimizer.type = 'SGD'
-c.training.optimizer.lr = 0.001
+c.training.optimizer.lr = 0.01
 c.training.optimizer.weight_decay = 0.001
 c.training.optimizer.momentum = 0.001       #SGD
 c.training.optimizer.betas = (0.9, 0.999)   #AdamW
+
+c.training.schedular = CN()
+c.training.schedular.type = 'cosine'
+c.training.schedular.lrf = 0.01
+
 
 c.training.loss = CN()
 c.training.loss.reg_type = ['giou','l1']

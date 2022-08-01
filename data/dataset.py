@@ -115,7 +115,7 @@ class CocoDataset(Dataset):
     def OD_default_collater(data):
         '''
         used in torch.utils.data.DataLaoder as collater_fn
-        parse the batch_size data into dict
+        parse the batch_size data into input_dict
         {"imgs":List lenth B, each with torch.uint8 img
          "anns":List lenth B, each with np.float32 ann, annType: x1y1wh
          "ids": List lenth B, each with str imgid}

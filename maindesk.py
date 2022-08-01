@@ -1,18 +1,20 @@
 from testtools import *
 
+args = get_args_parser().parse_args()
+train = Train(cfg, args, None, -1)
 
-model = DummyModel().cuda()
-op = optim.SGD(model.parameters(),lr=1)
-sc = scheduler.MultiStepLR(op,[5,10],gamma=0.1)
-op.zero_grad()
-
-
-opdict = op.state_dict()
-scdict = sc.state_dict()
-print(opdict.keys())
-print(opdict)
-print(scdict.keys())
-print(scdict)
+# model = DummyModel().cuda()
+# op = optim.SGD(model.parameters(),lr=1)
+# sc = scheduler.MultiStepLR(op,[5,10],gamma=0.1)
+# op.zero_grad()
+#
+#
+# opdict = op.state_dict()
+# scdict = sc.state_dict()
+# print(opdict.keys())
+# print(opdict)
+# print(scdict.keys())
+# print(scdict)
 
 # dataset = CocoDataset('CrowdHuman/annotation_val_coco_style.json','CrowdHuman/Images_val', config_data=cfg.data,
 #                       task='train')

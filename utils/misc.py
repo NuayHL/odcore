@@ -33,3 +33,10 @@ def x1y1x2y2_x1y1wh(labels):
     new_labels[:,2] -= new_labels[:,0]
     new_labels[:,3] -= new_labels[:,1]
     return new_labels
+
+def tensorInDict2device(input_dict, device):
+    for key in input_dict:
+        if isinstance(input_dict[key], torch.Tensor):
+            input_dict[key].to(device)
+        if isinstance(input_dict[key], dict):
+            tensorInDict2device(input_dict[key], device)
