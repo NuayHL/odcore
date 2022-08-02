@@ -3,16 +3,23 @@ import os
 from yacs.config import CfgNode as _CN
 
 class CN(_CN):
+    # def dump_to_file(self, yaml_name=None, path=''):
+    #     cfg_string = self.dump()
+    #     if yaml_name is None:
+    #         assert hasattr(self, 'exp_name')
+    #         file_name = self.exp_name
+    #     else:
+    #         file_name = yaml_name
+    #     with open(os.path.join(path,file_name + '.yaml'), "w") as f:
+    #         f.write(cfg_string)
     def dump_to_file(self, yaml_name=None, path=''):
-        cfg_string = self.dump()
         if yaml_name is None:
             assert hasattr(self, 'exp_name')
             file_name = self.exp_name
         else:
             file_name = yaml_name
         with open(os.path.join(path,file_name + '.yaml'), "w") as f:
-            f.write(cfg_string)
-
+            print(self, file=f)
 
 c = CN()
 c.exp_name = 'yolov3'
@@ -39,10 +46,10 @@ c.data.mixup = 0.243
 
 c.training = CN()
 
-c.training.train_img_path = ''
-c.training.train_img_anns_path = ''
-c.training.val_img_path = ''
-c.training.val_img_anns_path = ''
+c.training.train_img_path = 'train_img_path'
+c.training.train_img_anns_path = 'train_img_anns_path'
+c.training.val_img_path = 'val_img_path'
+c.training.val_img_anns_path = 'val_img_anns_path'
 c.training.batch_size = 8
 c.training.final_epoch = 200
 
