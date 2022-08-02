@@ -3,8 +3,6 @@ import os
 from yacs.config import CfgNode as _CN
 
 class CN(_CN):
-    def __init__(self):
-        super(CN, self).__init__()
     def dump_to_file(self, yaml_name=None, path=''):
         cfg_string = self.dump()
         if yaml_name is None:
@@ -67,4 +65,7 @@ def get_default_yaml_templete():
         f.write(cfg_string)
 
 if __name__ == "__main__":
-    get_default_yaml_templete()
+    cfg = get_default_cfg()
+    cfg.merge_from_file('default_config.yaml')
+    print(cfg)
+    #get_default_yaml_templete()
