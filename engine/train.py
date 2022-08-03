@@ -36,6 +36,7 @@ class Train():
             self.device = 'cuda'
         else:
             self.device = self.rank
+        self.model.set(self.args, self.device)
 
     def set_log_path(self):
         if self.is_main_process:
@@ -68,13 +69,13 @@ class Train():
             yaml.dump(arg_dict, f)
 
     def go(self):
+        self.final_epoch = self.config.training.final_epoch
         self.load_finetune_model()
         self.build_optimizer()
         self.build_scheduler()
         self.ema = ModelEMA(self.model) if self.is_main_process else None
         self.load_ckpt()
         self.load_model_to_GPU()
-        self.final_epoch = self.config.training.final_epoch
         assert self.final_epoch > self.start_epoch
         self.batchsize = self.args.batch_size
         self.build_train_dataloader()
@@ -93,7 +94,6 @@ class Train():
             for i, samples in enumerate(self.train_loader):
                 self.optimizer.zero_grad()
                 samples['imgs'] = samples['imgs'].to(self.device).float() / 255
-                samples['annss'] = samples['annss'].to(self.device)
                 with amp.autocast():
                     loss, loss_dict = self.model(samples)
                 loss_log = loss_dict_to_str(loss_dict)
@@ -103,15 +103,17 @@ class Train():
                 progressbar(i/float(itr_in_epoch), barlenth=40, endstr=loss_log)
                 self.logger.debug('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
                                   ' | '+loss_log)
+            self.save_ckpt('last_epoch')
             if self.current_epoch % self.args.eval_interval == 0:
                 if self.val_loader is None: continue
+        self.save_ckpt('fin_epoch')
 
     def val(self):
         self.model.eval()
         
     def load_finetune_model(self):
-        print('FineTuning Model:%', end='')
-        if self.args.fine_tune != ' ':
+        print('FineTuning Model: ', end='')
+        if self.args.fine_tune != '':
             print(self.args.fine_tune)
             print('\t-Loading:', end=' ')
             try:
@@ -180,7 +182,7 @@ class Train():
 
     def build_val_dataloader(self):
         if self.is_main_process:
-            if self.config.train.val_img_path == '':
+            if self.config.training.val_img_path == '':
                 self.val_loader = None
             else:
                 self.val_loader = build_dataloader(self.config.training.val_img_anns_path,
@@ -214,7 +216,7 @@ class Train():
     def build_scheduler(self):
         if not hasattr(self, 'optimizer'):
             self.build_optimizer()
-        if self.config.training.schedular == 'cosine':
+        if self.config.training.schedular.type == 'cosine':
             lf = lambda x: ((1 - math.cos(x * math.pi / self.final_epoch)) / 2) * (self.config.training.schedular.lrf - 1) + 1
         else:
             raise NotImplementedError
