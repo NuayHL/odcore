@@ -103,6 +103,8 @@ class Train():
                 progressbar(i/float(itr_in_epoch), barlenth=40, endstr=loss_log)
                 self.logger.debug('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
                                   ' | '+loss_log)
+            if self.current_epoch % self.args.eval_interval == 0:
+                if self.val_loader is None: continue
 
     def val(self):
         self.model.eval()
@@ -178,11 +180,14 @@ class Train():
 
     def build_val_dataloader(self):
         if self.is_main_process:
-            self.val_laoder = build_dataloader(self.config.training.val_img_anns_path,
-                                               self.config.training.val_img_path,
-                                               self.config.data,
-                                               self.batchsize, -1, self.args.workers,
-                                               'val')
+            if self.config.train.val_img_path == '':
+                self.val_loader = None
+            else:
+                self.val_loader = build_dataloader(self.config.training.val_img_anns_path,
+                                                   self.config.training.val_img_path,
+                                                   self.config.data,
+                                                   self.batchsize, -1, self.args.workers,
+                                                   'val')
 
     def build_optimizer(self):
         config_opt = self.config.training.optimizer
