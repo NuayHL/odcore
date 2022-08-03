@@ -90,6 +90,19 @@ class CocoDataset(Dataset):
         anns = self.annotations.imgToAnns[self.image_id[idx]]
         anns = [ann['bbox']+[ann['category_id']] for ann in anns if ann['category_id'] != -1 or self.ignored_input]
         anns = np.array(anns, dtype=np.float32)
+        if self.config_data.annotation_format == 'x1y1wh':
+            anns[:, 0] += anns[:, 2] * 0.5
+            anns[:, 1] += anns[:, 3] * 0.5
+        elif self.config_data.annotation_format == 'x1y1x2y2':
+            anns[:, 2] -= anns[:, 0]
+            anns[:, 3] -= anns[:, 1]
+            anns[:, 0] += anns[:, 2] * 0.5
+            anns[:, 1] += anns[:, 3] * 0.5
+        elif self.config_data.annotation_format == 'xywh':
+            pass
+        else:
+            raise NotImplementedError('Expect config.data.annotation_format in %s, %s and %s, but got %s.'
+                                      %('xywh','x1y1wh','x1y1x2y2',self.config_data.annotation_format))
         return anns
 
     def get_mosaic(self, sample):

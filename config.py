@@ -29,6 +29,7 @@ c.data.input_width = 640
 c.data.input_height = 640
 c.data.ignored_input = True
 c.data.numofclasses = 1
+c.data.annotation_format = 'x1y1wh'
 
 c.data.hsv_h = 0.0138
 c.data.hsv_s = 0.664

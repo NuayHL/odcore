@@ -20,6 +20,10 @@ def x1y1x2y2_x1y1wh_(labels):
     labels[:,2] -= labels[:,0]
     labels[:,3] -= labels[:,1]
 
+def x1y1wh_xywh_(labels):
+    labels[:,0] += labels[:,2] * 0.5
+    labels[:,1] += labels[:,3] * 0.5
+
 def x1y1wh_x1y1x2y2(labels):
     '''labels: np.ndarray or torch.Tensor with shape:n x (4+)'''
     new_labels = deepcopy(labels)
