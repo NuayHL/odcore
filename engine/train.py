@@ -13,7 +13,7 @@ from config import CN
 from data.dataloader import build_dataloader
 from utils.ema import ModelEMA
 from utils.exp_storage import mylogger
-from utils.misc import progressbar
+from utils.misc import progressbar, loss_dict_to_str
 
 class Train():
     main_log_storage_path = 'running_log'
@@ -83,17 +83,26 @@ class Train():
         self.train()
 
     def train(self):
+        scaler = amp.GradScaler()
         itr_in_epoch = len(self.train_loader)
         for epoch in range(self.start_epoch, self.final_epoch + 1):
+            self.current_epoch = epoch
             self.model.train()
             if self.rank != -1:
                 self.train_loader.sampler.set_epoch(epoch)
             for i, samples in enumerate(self.train_loader):
+                self.optimizer.zero_grad()
                 samples['imgs'] = samples['imgs'].to(self.device).float() / 255
                 samples['annss'] = samples['annss'].to(self.device)
-                loss, loss_dict = self.model(samples)
-                progressbar(i/float(itr_in_epoch), endstr='')
-
+                with amp.autocast():
+                    loss, loss_dict = self.model(samples)
+                loss_log = loss_dict_to_str(loss_dict)
+                scaler.scale(loss).backward()
+                scaler.step(self.optimizer)
+                scaler.update()
+                progressbar(i/float(itr_in_epoch), barlenth=40, endstr=loss_log)
+                self.logger.debug('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
+                                  ' | '+loss_log)
 
     def val(self):
         self.model.eval()

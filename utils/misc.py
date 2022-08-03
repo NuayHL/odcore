@@ -50,3 +50,9 @@ def progressbar(percentage, endstr='', barlenth=20):
     print('\r[' + '>' * int(percentage * barlenth) +
           '-' * (barlenth - int(percentage * barlenth)) + ']',
           format(percentage * 100, '.1f'), '%', end=' '+endstr)
+
+def loss_dict_to_str(loss_dict):
+    fin_str = '|| '
+    for key in loss_dict:
+        fin_str += str(key) + ': % 6.2f'%loss_dict[key]+ ' || '
+    return fin_str
