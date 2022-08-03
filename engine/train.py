@@ -75,12 +75,12 @@ class Train():
         self.build_scheduler()
         self.ema = ModelEMA(self.model) if self.is_main_process else None
         self.load_ckpt()
-        self.load_model_to_GPU()
         assert self.final_epoch > self.start_epoch
+        self.load_model_to_GPU()
         self.batchsize = self.args.batch_size
         self.build_train_dataloader()
         self.build_val_dataloader()
-        print('==========go==========')
+        print('====================================== GO ======================================')
         self.train()
 
     def train(self):
@@ -91,6 +91,7 @@ class Train():
             self.model.train()
             if self.rank != -1:
                 self.train_loader.sampler.set_epoch(epoch)
+            print('Epoch: %d/%d'%(self.current_epoch, self.final_epoch))
             for i, samples in enumerate(self.train_loader):
                 self.optimizer.zero_grad()
                 samples['imgs'] = samples['imgs'].to(self.device).float() / 255
@@ -100,9 +101,9 @@ class Train():
                 scaler.scale(loss).backward()
                 scaler.step(self.optimizer)
                 scaler.update()
-                progressbar(i/float(itr_in_epoch), barlenth=40, endstr=loss_log)
-                self.logger.debug('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
-                                  ' | '+loss_log)
+                progressbar((i+1)/float(itr_in_epoch), barlenth=40, endstr=loss_log)
+                self.logger.info('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
+                                  ' '+loss_log)
             self.save_ckpt('last_epoch')
             if self.current_epoch % self.args.eval_interval == 0:
                 if self.val_loader is None: continue
@@ -140,7 +141,7 @@ class Train():
                 self.scheduler.load_state_dict(ckpt_file['schedular'])
                 if self.is_main_process:
                     self.ema.ema = ckpt_file['ema']
-                    self.ema.updates = ckpt_file['updates']
+                    self.ema.updates = ckpt_file['ema_updates']
                 print('SUCCESS')
                 self.logger.info('Using Checkpoint: %s'%self.args.ckpt_file)
             except:
