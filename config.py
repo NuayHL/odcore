@@ -72,7 +72,7 @@ def get_default_yaml_templete():
         f.write(cfg_string)
 
 if __name__ == "__main__":
-    cfg = get_default_cfg()
-    cfg.merge_from_file('default_config.yaml')
-    print(cfg)
-    #get_default_yaml_templete()
+    # cfg = get_default_cfg()
+    # cfg.merge_from_file('default_config.yaml')
+    # print(cfg)
+    get_default_yaml_templete()

@@ -1,8 +1,7 @@
 from testtools import *
 
 args = get_args_parser().parse_args()
-train = Train(cfg, args, None, -1)
-
+cfg.merge_from_file('test.yaml')
 # model = DummyModel().cuda()
 # op = optim.SGD(model.parameters(),lr=1)
 # sc = scheduler.MultiStepLR(op,[5,10],gamma=0.1)
@@ -16,9 +15,11 @@ train = Train(cfg, args, None, -1)
 # print(scdict.keys())
 # print(scdict)
 
-# dataset = CocoDataset('CrowdHuman/annotation_val_coco_style.json','CrowdHuman/Images_val', config_data=cfg.data,
-#                       task='train')
-# dataset_inspection(dataset, 1110, anntype='x1y1wh')
+dataset = CocoDataset('CrowdHuman/annotation_train_coco_style_100.json','CrowdHuman/Images_train', config_data=cfg.data,
+                      task='train')
+dataset_inspection(dataset, 78, anntype='xywh')
+dataset_inspection(dataset, 78, anntype='xywh')
+dataset_inspection(dataset, 78, anntype='xywh')
 
 # samples = [dataset[990],dataset[990],dataset[990],dataset[990]]
 # imgs = [sample['img'] for sample in samples]

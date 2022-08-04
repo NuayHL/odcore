@@ -162,8 +162,7 @@ class Mosaic():
             img, h, w = imgs[i], hs[i], ws[i]
             # place img in img4
             if i == 0:  # top left
-                x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h,
-                                                         0), xc, yc  # xmin, ymin, xmax, ymax (out image location)
+                x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h, 0), xc, yc  # xmin, ymin, xmax, ymax (out image location)
                 x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h  # xmin, ymin, xmax, ymax (crop ori image)
             elif i == 1:  # top right
                 x1a, y1a, x2a, y2a = xc, max(yc - h, 0), min(xc + w, self.img_size[0] * 2), yc
@@ -177,7 +176,7 @@ class Mosaic():
             img4[y1a:y2a, x1a:x2a] = img[y1b:y2b, x1b:x2b]  # img4[ymin:ymax, xmin:xmax]
             padw = x1a - x1b
             padh = y1a - y1b
-
+            print(padw)
             # Labels
             labels[i][:, 0] += padw  # top left x
             labels[i][:, 1] += padh  # top left y
@@ -191,7 +190,7 @@ class Mosaic():
         x1y1x2y2_x1y1wh_(labels4)
         sim_sample = {'img':img4, 'anns':labels4}
         # Augment
-        self.random_affine(sim_sample)
+        #self.random_affine(sim_sample)
 
         return sim_sample['img'], sim_sample['anns']
 
