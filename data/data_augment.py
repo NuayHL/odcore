@@ -136,7 +136,7 @@ class RandomAffine():
 
             # clip
             new[:, [0, 2]] = new[:, [0, 2]].clip(0, self.img_size[0])
-            new[:, [1, 3]] = new[:, [1, 3]].clip(0, self.img_size[0])
+            new[:, [1, 3]] = new[:, [1, 3]].clip(0, self.img_size[1])
 
             # filter candidates
             i = box_candidates(box1=sample['anns'][:, 0:4].T * s, box2=new.T, area_thr=0.1)
@@ -189,9 +189,10 @@ class Mosaic():
         labels4[:, [1, 3]] = labels4[:, [1, 3]].clip(0, 2 * self.img_size[1])
         x1y1x2y2_x1y1wh_(labels4)
         sim_sample = {'img':img4, 'anns':labels4}
+        print('mo_1:', len(sim_sample['anns']), end='\t')
         # Augment
         #self.random_affine(sim_sample)
-
+        print('mo_r:', len(sim_sample['anns']), end='\t')
         return sim_sample['img'], sim_sample['anns']
 
 def get_transform_matrix(img_shape, new_shape, degrees, scale, shear, translate):

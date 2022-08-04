@@ -12,6 +12,7 @@ def build_dataloader(anns_path, img_path, config_data, batch_size, rank, workers
     loader = DataLoader(dataset,
                         batch_size=batch_size,
                         num_workers=workers,
+                        persistent_workers=False,
                         collate_fn=dataset.OD_default_collater,
                         sampler=sampler)
     return loader

@@ -42,7 +42,7 @@ def dataset_assign_inspection(dataset, imgid, annsidx=None):
 
 @tran_img
 def show_bbox(img, bboxs=[], type="xywh",color=[0,0,255],score=None, **kwargs):
-    print(len(bboxs))
+    print('Received bbox:',len(bboxs))
     img = _add_bbox_img(img, bboxs=bboxs, type=type,color=color,score=score, **kwargs)
     printImg(img)
 
@@ -125,6 +125,7 @@ def _add_bbox_img(img, bboxs=[], type="xywh",color=[0,0,255], score=None, **kwar
         if type == "x1y1x2y2": a, b = (bbox[0],bbox[1]),(bbox[2],bbox[3])
         elif type == "x1y1wh": a, b = (bbox[0],bbox[1]),(bbox[0]+bbox[2],bbox[1]+bbox[3])
         else: a, b = (bbox[0]-int(bbox[2]/2),bbox[1]-int(bbox[3]/2)),(bbox[0]+int(bbox[2]/2),bbox[1]+int(bbox[3]/2))
+        img = np.ascontiguousarray(img)
         img = cv2.rectangle(img,a,b,color, **kwargs)
         if score is not None:
             text = classname[int(score[idx,1].item())]['name']
