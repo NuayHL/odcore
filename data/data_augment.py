@@ -179,14 +179,14 @@ class Mosaic():
             # Labels
             labels[i][:, 0] += padw  # top left x
             labels[i][:, 1] += padh  # top left y
-            boxes = x1y1wh_x1y1x2y2(labels[i])
+            boxes = xywh_x1y1x2y2(labels[i])
             labels4.append(boxes)
 
         # Concat/clip labels
         labels4 = np.concatenate(labels4, 0)
         labels4[:, [0, 2]] = labels4[:, [0, 2]].clip(0, 2 * self.img_size[0])
         labels4[:, [1, 3]] = labels4[:, [1, 3]].clip(0, 2 * self.img_size[1])
-        x1y1x2y2_x1y1wh_(labels4)
+        x1y1x2y2_xywh_(labels4)
         sim_sample = {'img':img4, 'anns':labels4}
         print('mo_1:', len(sim_sample['anns']), end='\t')
         # Augment
