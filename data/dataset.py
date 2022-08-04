@@ -74,7 +74,7 @@ class CocoDataset(Dataset):
         if self.task == 'train':
             self.general_augment(sample)
             print('g:', len(sample['anns']), end='\t')
-
+        print('fin:', len(sample['anns']))
         sample["img"] = sample["img"][:,:,::-1]
         sample["img"] = np.ascontiguousarray(sample["img"])
         return sample

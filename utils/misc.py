@@ -16,11 +16,21 @@ def x1y1wh_x1y1x2y2_(labels):
     labels[:,3] += labels[:,1]
 
 def x1y1x2y2_x1y1wh_(labels):
-    '''labels: np.ndarray or torch.Tensor with shape:n x (4+)'''
     labels[:,2] -= labels[:,0]
     labels[:,3] -= labels[:,1]
 
 def x1y1wh_xywh_(labels):
+    labels[:,0] += labels[:,2] * 0.5
+    labels[:,1] += labels[:,3] * 0.5
+
+def xywh_x1y1x2y2_(labels):
+    labels[:,0] -= labels[:,2] * 0.5
+    labels[:,2] += labels[:,0]
+    labels[:,1] -= labels[:,3] * 0.5
+    labels[:,3] += labels[:,1]
+def x1y1x2y2_xywh_(labels):
+    labels[:,2] -= labels[:,0]
+    labels[:,3] -= labels[:,1]
     labels[:,0] += labels[:,2] * 0.5
     labels[:,1] += labels[:,3] * 0.5
 
@@ -37,6 +47,7 @@ def x1y1x2y2_x1y1wh(labels):
     new_labels[:,2] -= new_labels[:,0]
     new_labels[:,3] -= new_labels[:,1]
     return new_labels
+
 
 def tensorInDict2device(input_dict, device):
     for key in input_dict:

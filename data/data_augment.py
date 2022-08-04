@@ -123,7 +123,7 @@ class RandomAffine():
 
         # Transform label coordinates
         if n:
-            x1y1wh_x1y1x2y2_(sample['anns'])
+            xywh_x1y1x2y2_(sample['anns'])
             xy = np.ones((n * 4, 3))
             xy[:, :2] = sample['anns'][:, [0, 1, 2, 3, 0, 3, 2, 1]].reshape(n * 4, 2)  # x1y1, x2y2, x1y2, x2y1
             xy = xy @ M.T  # transform
@@ -143,7 +143,7 @@ class RandomAffine():
             sample['anns'] = sample['anns'][i]
             sample['anns'][:, 0:4] = new[i]
 
-        x1y1x2y2_x1y1wh_(sample['anns'])
+        x1y1x2y2_xywh_(sample['anns'])
 
 class Mosaic():
     def __init__(self, config_data):
@@ -176,7 +176,6 @@ class Mosaic():
             img4[y1a:y2a, x1a:x2a] = img[y1b:y2b, x1b:x2b]  # img4[ymin:ymax, xmin:xmax]
             padw = x1a - x1b
             padh = y1a - y1b
-            print(padw)
             # Labels
             labels[i][:, 0] += padw  # top left x
             labels[i][:, 1] += padh  # top left y
@@ -191,7 +190,7 @@ class Mosaic():
         sim_sample = {'img':img4, 'anns':labels4}
         print('mo_1:', len(sim_sample['anns']), end='\t')
         # Augment
-        #self.random_affine(sim_sample)
+        self.random_affine(sim_sample)
         print('mo_r:', len(sim_sample['anns']), end='\t')
         return sim_sample['img'], sim_sample['anns']
 
