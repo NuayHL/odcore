@@ -87,8 +87,9 @@ class CocoDataset(Dataset):
 
     def load_anns(self, idx):
         anns = self.annotations.imgToAnns[self.image_id[idx]]
-        anns = [ann['bbox']+[ann['category_id']] for ann in anns if ann['category_id'] != -1 or self.ignored_input]
+        anns = [ann['bbox']+[ann['category_id']-1] for ann in anns if ann['category_id'] != -1 or self.ignored_input]
         anns = np.array(anns, dtype=np.float32)
+        if anns.shape[0] == 0: anns = np.zeros((1,5))
         if self.config_data.annotation_format == 'x1y1wh':
             anns[:, 0] += anns[:, 2] * 0.5
             anns[:, 1] += anns[:, 3] * 0.5
