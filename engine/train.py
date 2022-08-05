@@ -82,7 +82,7 @@ class Train():
         self.build_train_dataloader()
         self.build_val_dataloader()
         self.print('====================================== GO ======================================')
-        self.train()
+        self.train_amp()
 
     def train_amp(self):
         scaler = amp.GradScaler()

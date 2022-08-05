@@ -30,7 +30,7 @@ class CocoDataset(Dataset):
     def __init__(self, annotationPath, imgFilePath, config_data, task='train'):
         super(CocoDataset, self).__init__()
         self.jsonPath = annotationPath
-        self.imgPath = imgFilePath + "/"
+        self.imgPath = imgFilePath
         self.annotations = COCO(annotationPath)
         self.task = task
         self.image_id = self.annotations.getImgIds()
@@ -82,7 +82,7 @@ class CocoDataset(Dataset):
     def load_img(self, idx):
         img = self.annotations.imgs[self.image_id[idx]]
         w0, h0, id = img["width"], img["height"], img["id"]
-        img = cv2.imread(self.imgPath + img["file_name"] + ".jpg")
+        img = cv2.imread(os.path.join(self.imgPath, img["file_name"] + ".jpg"))
         return img, (w0, h0), id
 
     def load_anns(self, idx):

@@ -3,8 +3,8 @@ import yaml
 
 def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description='Default odcore args', add_help=add_help)
-    parser.add_argument('--conf-file', default='default_config.yaml', type=str, help='config file path')
-    parser.add_argument('--ckpt-file', default='', type=str, help='load the ckpt file which is compatible with config ')
+    parser.add_argument('--conf-file', default='test_config.yaml', type=str, help='config file path')
+    parser.add_argument('--ckpt-file', default='last_epoch.pth', type=str, help='load the ckpt file which is compatible with config ')
     parser.add_argument('--fine-tune', default='', type=str, help='load the ckpt file only for model loading')
     parser.add_argument('--batch-size', default=8, type=int, help='number of batchsize')
     parser.add_argument('--workers', default=4, type=int, help='number of data loading workers (default: 8)')
