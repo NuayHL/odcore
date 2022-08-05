@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.optim.lr_scheduler as scheduler
 from data.dataset import CocoDataset
-from utils.visualization import dataset_inspection, show_bbox
+from utils.visualization import *
 from utils.misc import *
 from engine.train import Train
 from config import get_default_cfg

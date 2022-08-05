@@ -1,10 +1,12 @@
-import os.path
+import os
 
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
 from functools import wraps
+
+from utils.misc import progressbar
 
 # decorator for tran img
 def tran_img(fun):
@@ -150,6 +152,7 @@ def draw_loss(file_name,outputImgName="loss"):
     loss_name = []
     r_idx = 0
     loss_name_flag = 0
+    total_lenth = len(losses)
     for idx, loss in enumerate(losses):
         try:
             if "||" not in loss:
@@ -160,8 +163,8 @@ def draw_loss(file_name,outputImgName="loss"):
                     loss_list[name] = []
                 loss_name_flag = 1
             for name in loss_name:
-                str_s = loss.rfind(name)
-                str_s += (len(loss) + 1)
+                str_s = loss.find(name)
+                str_s += (len(name) + 1)
                 for i in range(6):
                     if loss[str_s+i] != ' ':
                         str_s = str_s + i
@@ -176,6 +179,7 @@ def draw_loss(file_name,outputImgName="loss"):
             raise
         index.append(r_idx)
         r_idx += 1
+        progressbar((idx+1)/float(total_lenth), barlenth=40)
     fig, ax = plt.subplots()
     for name in loss_name:
         ax.plot(index, loss_list[name])
@@ -183,15 +187,15 @@ def draw_loss(file_name,outputImgName="loss"):
     ax.grid()
     fig.legend(loss_name)
     savepath = os.path.dirname(file_name)
-    fig.savefig(os.path.join(savepath, outputImgName+".png"),dpi = 300)
+    fig.savefig(os.path.join(savepath, (outputImgName+".png")),dpi = 300)
     plt.show()
 
 def _parse_loss_name(string: str):
     loss_name = []
-    start = string.rfind(':')
+    start = string.find('||')
     string = string[(start+1):]
     while (':' in string):
-        end = string.rfind(':')
+        end = string.find(':')
         start = 0
         for i in range(2,100):
             if string[end-i] == ' ':

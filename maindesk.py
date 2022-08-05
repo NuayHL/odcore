@@ -1,7 +1,7 @@
 from testtools import *
 
-args = get_args_parser().parse_args()
-cfg.merge_from_file('test.yaml')
+# args = get_args_parser().parse_args()
+# cfg.merge_from_file('test.yaml')
 # model = DummyModel().cuda()
 # op = optim.SGD(model.parameters(),lr=1)
 # sc = scheduler.MultiStepLR(op,[5,10],gamma=0.1)
@@ -14,12 +14,12 @@ cfg.merge_from_file('test.yaml')
 # print(opdict)
 # print(scdict.keys())
 # print(scdict)
-
-dataset = CocoDataset('CrowdHuman/annotation_train_coco_style_100.json','CrowdHuman/Images_train', config_data=cfg.data,
-                      task='train')
-dataset_inspection(dataset, 78, anntype='xywh')
-dataset_inspection(dataset, 78, anntype='xywh')
-dataset_inspection(dataset, 78, anntype='xywh')
+#
+# dataset = CocoDataset('CrowdHuman/annotation_train_coco_style_100.json','CrowdHuman/Images_train', config_data=cfg.data,
+#                       task='train')
+# dataset_inspection(dataset, 78, anntype='xywh')
+# dataset_inspection(dataset, 78, anntype='xywh')
+# dataset_inspection(dataset, 78, anntype='xywh')
 
 # samples = [dataset[990],dataset[990],dataset[990],dataset[990]]
 # imgs = [sample['img'] for sample in samples]
@@ -30,3 +30,4 @@ dataset_inspection(dataset, 78, anntype='xywh')
 # img, label = mosaic_augmentation((800, 1200), imgs, hs, ws, labels, cfg.data)
 # show_bbox(img, label, type='x1y1wh')
 
+draw_loss('testing_2.log')
