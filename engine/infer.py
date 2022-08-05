@@ -2,10 +2,12 @@ import torch
 import torch.nn
 
 class Infer():
-    def __init__(self, config, args, model):
+    def __init__(self, config, args, model, device):
         self.config = config
         self.args = args
         self.model = model
+        self.device = device
+        self.load_model()
 
     def load_model(self):
         self.print('FineTuning Model: ', end='')
@@ -20,9 +22,10 @@ class Infer():
             except:
                 self.print("FAIL")
                 raise
+            self.model = self.model.to(self.device)
         else:
-            self.print('None')
-
+            self.print('Please indicating one .pth/.pt file!')
+            exit()
 
     def __call__(self, img):
-        if
+        
