@@ -1,3 +1,5 @@
+import os.path
+
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -140,29 +142,65 @@ def _isArrayLike(obj):
     return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
 
 
-def draw_loss(file_name,outputImgName="loss",logpath="trainingLog",savepath="trainingLog/lossV"):
-    with open(logpath+"/"+file_name,"r") as f:
+def draw_loss(file_name,outputImgName="loss"):
+    with open(file_name,"r") as f:
         losses = f.readlines()
-        loss_list = []
-        index = []
-        start_idx = 0
-        for idx, i in enumerate(losses):
-            if "WARNING" in i:
+    loss_list = {}
+    index = []
+    loss_name = []
+    r_idx = 0
+    loss_name_flag = 0
+    for idx, loss in enumerate(losses):
+        try:
+            if "||" not in loss:
                 continue
-            try:
-                loss = float(i[(i.rfind(":")+1):])
-            except:
-                print('errorline:',idx)
-            loss_list.append(loss)
-            index.append(start_idx)
-            start_idx += 1
+            if loss_name_flag == 0:
+                loss_name = _parse_loss_name(loss)
+                for name in loss_name:
+                    loss_list[name] = []
+                loss_name_flag = 1
+            for name in loss_name:
+                str_s = loss.rfind(name)
+                str_s += (len(loss) + 1)
+                for i in range(6):
+                    if loss[str_s+i] != ' ':
+                        str_s = str_s + i
+                        break
+                for i in range(1,6):
+                    if loss[str_s+i] == ' ':
+                        str_e = str_s+i
+                        break
+                loss_list[name].append(float(loss[str_s:str_e]))
+        except:
+            print('errorline:',idx)
+            raise
+        index.append(r_idx)
+        r_idx += 1
     fig, ax = plt.subplots()
-    ax.plot(index, loss_list)
+    for name in loss_name:
+        ax.plot(index, loss_list[name])
     ax.set(xlabel="Iteration(times)",ylabel="Loss",title="Training Loss for "+file_name)
     ax.grid()
-
-    fig.savefig(savepath+"/"+file_name+"_"+outputImgName+".png")
+    fig.legend(loss_name)
+    savepath = os.path.dirname(file_name)
+    fig.savefig(os.path.join(savepath, outputImgName+".png"),dpi = 300)
     plt.show()
+
+def _parse_loss_name(string: str):
+    loss_name = []
+    start = string.rfind(':')
+    string = string[(start+1):]
+    while (':' in string):
+        end = string.rfind(':')
+        start = 0
+        for i in range(2,100):
+            if string[end-i] == ' ':
+                start = end-i+1
+                break
+        loss_name.append(string[start:end])
+        string = string[(end+1):]
+    return loss_name
+
 
 # has a bug
 def draw_loss_epoch(file_name, num_in_epoch, outputImgName="loss per epoch", logpath="trainingLog", savepath="trainingLog/lossV"):
