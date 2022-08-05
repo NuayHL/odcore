@@ -57,24 +57,17 @@ class CocoDataset(Dataset):
             sample['anns] = n x (x1 y1 w h c) np.float32 img
         '''
         sample = self.load_sample(idx)
-        print('s:',len(sample['anns']), end='\t')
         if self.task == 'train' and random.random() < self.config_data.mosaic:
             self.get_mosaic(sample)
-            print('mo:',len(sample['anns']), end='\t')
             if random.random() < self.config_data.mixup:
                 self.get_mixup(sample)
-                print('mi:',len(sample['anns']), end='\t')
         else:
             self.letterbox(sample)
-            print('l:',len(sample['anns']), end='\t')
             if self.task == 'train':
                 self.random_affine(sample)
-                print('r:',len(sample['anns']), end='\t')
 
         if self.task == 'train':
             self.general_augment(sample)
-            print('g:', len(sample['anns']), end='\t')
-        print('fin:', len(sample['anns']))
         sample["img"] = sample["img"][:,:,::-1]
         sample["img"] = np.ascontiguousarray(sample["img"])
         return sample

@@ -29,7 +29,7 @@ class Train():
         self.set_log_path()
         self.set_logger()
         if self.args.ckpt_file != '' and self.args.fine_tune != '':
-            print("Warning: Detect both ckpt_file and fine_tune file, using ckpt_file")
+            self.print("Warning: Detect both ckpt_file and fine_tune file, using ckpt_file")
             self.args.fine_tune = ''
         self.dump_configurations()
         if self.rank == -1:
@@ -41,7 +41,7 @@ class Train():
     def set_log_path(self):
         if self.is_main_process:
             base_name = self.config.exp_name
-            print('Experiment Name: %s'%base_name)
+            self.print('Experiment Name: %s'%base_name)
             if not os.path.exists(self.main_log_storage_path):
                 os.mkdir(self.main_log_storage_path)
             name_index = 1
@@ -53,7 +53,7 @@ class Train():
             final_name = self.main_log_storage_path+'/'+final_name
             os.mkdir(final_name)
             self.exp_log_path = final_name
-            print('Experiment Storage Path: %s'%self.exp_log_path)
+            self.print('Experiment Storage Path: %s'%self.exp_log_path)
 
     def set_logger(self):
         if self.is_main_process:
@@ -78,12 +78,13 @@ class Train():
         assert self.final_epoch > self.start_epoch
         self.load_model_to_GPU()
         self.batchsize = self.args.batch_size
+        self.print('Batch size:', self.batchsize)
         self.build_train_dataloader()
         self.build_val_dataloader()
-        print('====================================== GO ======================================')
+        self.print('====================================== GO ======================================')
         self.train()
 
-    def train(self):
+    def train_amp(self):
         scaler = amp.GradScaler()
         itr_in_epoch = len(self.train_loader)
         for epoch in range(self.start_epoch, self.final_epoch + 1):
@@ -91,7 +92,7 @@ class Train():
             self.model.train()
             if self.rank != -1:
                 self.train_loader.sampler.set_epoch(epoch)
-            print('Epoch: %d/%d'%(self.current_epoch, self.final_epoch))
+            self.print('Epoch: %d/%d'%(self.current_epoch, self.final_epoch))
             for i, samples in enumerate(self.train_loader):
                 self.optimizer.zero_grad()
                 samples['imgs'] = samples['imgs'].to(self.device).float() / 255
@@ -101,9 +102,36 @@ class Train():
                 scaler.scale(loss).backward()
                 scaler.step(self.optimizer)
                 scaler.update()
-                progressbar((i+1)/float(itr_in_epoch), barlenth=40, endstr=loss_log)
+                # self.print(loss_log)
+                if self.is_main_process:
+                    progressbar((i+1)/float(itr_in_epoch), barlenth=40, endstr=loss_log)
                 self.logger.info('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
                                   ' '+loss_log)
+            self.save_ckpt('last_epoch')
+            if self.current_epoch % self.args.eval_interval == 0:
+                if self.val_loader is None: continue
+        self.save_ckpt('fin_epoch')
+
+    def train(self):
+        itr_in_epoch = len(self.train_loader)
+        for epoch in range(self.start_epoch, self.final_epoch + 1):
+            self.current_epoch = epoch
+            self.model.train()
+            if self.rank != -1:
+                self.train_loader.sampler.set_epoch(epoch)
+            self.print('Epoch: %d/%d' % (self.current_epoch, self.final_epoch))
+            for i, samples in enumerate(self.train_loader):
+                self.optimizer.zero_grad()
+                samples['imgs'] = samples['imgs'].to(self.device).float() / 255
+                loss, loss_dict = self.model(samples)
+                loss.backward()
+                self.optimizer.step()
+                loss_log = loss_dict_to_str(loss_dict)
+                # self.print(loss_log)
+                if self.is_main_process:
+                    progressbar((i + 1) / float(itr_in_epoch), barlenth=40, endstr=loss_log)
+                self.logger.info('epoch ' + str(self.current_epoch) + '/' + str(self.final_epoch) +
+                                 ' ' + loss_log)
             self.save_ckpt('last_epoch')
             if self.current_epoch % self.args.eval_interval == 0:
                 if self.val_loader is None: continue
@@ -113,26 +141,26 @@ class Train():
         self.model.eval()
         
     def load_finetune_model(self):
-        print('FineTuning Model: ', end='')
+        self.print('FineTuning Model: ', end='')
         if self.args.fine_tune != '':
-            print(self.args.fine_tune)
-            print('\t-Loading:', end=' ')
+            self.print(self.args.fine_tune)
+            self.print('\t-Loading:', end=' ')
             try:
                 ckpt_file = torch.load(self.args.fine_tune)
                 self.model.load_state_dict(ckpt_file['model'])
-                print('SUCCESS')
+                self.print('SUCCESS')
                 self.logger.info('Using FineTuning Model: %s'%self.args.fine_tune)
             except:
-                print("FAIL")
+                self.print("FAIL")
                 raise
         else:
-            print('None')
+            self.print('None')
 
     def load_ckpt(self):
-        print('Checkpoint File:', end=' ')
+        self.print('Checkpoint File:', end=' ')
         if self.args.ckpt_file != '':
-            print(self.args.ckpt_file)
-            print("\t-Loading:", end=' ')
+            self.print(self.args.ckpt_file)
+            self.print("\t-Loading:", end=' ')
             try:
                 ckpt_file = torch.load(self.args.ckpt_file)
                 self.model.load_state_dict(ckpt_file['model'])
@@ -142,15 +170,15 @@ class Train():
                 if self.is_main_process:
                     self.ema.ema = ckpt_file['ema']
                     self.ema.updates = ckpt_file['ema_updates']
-                print('SUCCESS')
+                self.print('SUCCESS')
                 self.logger.info('Using Checkpoint: %s'%self.args.ckpt_file)
             except:
-                print("FAIL")
+                self.print("FAIL")
                 raise
         if self.args.ckpt_file == '':
-            print("None")
+            self.print("None")
             self.start_epoch = 1
-        print("Start epoch:", self.start_epoch)
+        self.print("Start epoch:", self.start_epoch)
         self.logger.info("Start Epoch: %d"%self.start_epoch)
 
     def save_ckpt(self, file_name):
@@ -168,11 +196,11 @@ class Train():
     def load_model_to_GPU(self):
         if self.rank == -1:
             self.model = self.model.to(self.device)
-            print("Using Single GPU")
+            self.print("Using Single GPU")
         else:
             self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model).to(self.device)
             self.model = DDP(self.model, device_ids=[self.device], output_device=self.device)
-            print("DDP mode, Using multiGPU")
+            self.print("DDP mode, Using multiGPU")
 
     def build_train_dataloader(self):
         self.train_loader = build_dataloader(self.config.training.train_img_anns_path,
@@ -222,6 +250,10 @@ class Train():
         else:
             raise NotImplementedError
         self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lf)
+
+    def print(self, *args, **kwargs):
+        if self.is_main_process:
+            print(*args, **kwargs)
 
 if __name__ == "__main__":
     pass
