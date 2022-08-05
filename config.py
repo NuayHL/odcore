@@ -30,13 +30,12 @@ c.data.input_height = 640
 c.data.ignored_input = True
 c.data.numofclasses = 1
 c.data.annotation_format = 'x1y1wh'
-
 c.data.hsv_h = 0.0138
 c.data.hsv_s = 0.664
 c.data.hsv_v = 0.464
 c.data.degrees = 0.373
 c.data.translate = 0.245
-c.data.scale = 0.898
+c.data.scale = 0.7
 c.data.shear = 0.602
 c.data.flipud = 0.00856
 c.data.fliplr = 0.5

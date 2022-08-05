@@ -4,6 +4,8 @@ import random
 import math
 from utils.misc import *
 
+#Important: The augments are design for xywh label formats
+
 class Normalizer():
     def __init__(self, config_data):
         self.mean = np.array(config_data.input_mean)
@@ -25,7 +27,7 @@ class GeneralAugmenter():
             sample["img"] = sample["img"][:,::-1,:]
 
             _, width, _ = sample["img"].shape
-            sample["anns"][:, 0] = width - sample["anns"][:, 0] - sample["anns"][:, 2]
+            sample["anns"][:, 0] = width - sample["anns"][:, 0]
             sample["img"] = np.ascontiguousarray(sample["img"])
 
         # up-down flip
@@ -33,7 +35,7 @@ class GeneralAugmenter():
             sample["img"] = sample["img"][::-1,:,:]
 
             height, _, _ = sample["img"].shape
-            sample["anns"][:, 1] = height - sample["anns"][:, 1] - sample["anns"][:, 3]
+            sample["anns"][:, 1] = height - sample["anns"][:, 1]
             sample["img"] = np.ascontiguousarray(sample["img"])
 
         # HSV color-space augmentation
