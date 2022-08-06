@@ -8,7 +8,6 @@ import os
 import yaml
 import torch.optim as optim
 
-import config
 from config import CN
 from data.dataloader import build_dataloader
 from utils.ema import ModelEMA
@@ -46,32 +45,32 @@ class Train():
             self.print("Resume Experiment For Training")
             self.formal_exp = Exp(self.args.resume_exp,self.is_main_process)
             self.config.merge_from_file(self.formal_exp.get_cfg_path())
-            self.exp_log_path = self.args.resume_exp
-            self.exp_log_name = os.path.basename(self.args.resume_exp)
-            self.print('Resume Function not Complete, Exit Training')
-            exit()
-            del self.formal_exp
 
     def set_log_path(self):
-        if self.is_main_process and not self.using_resume:
-            base_name = self.config.exp_name
-            self.print('Experiment Name: %s'%base_name)
-            if not os.path.exists(self.main_log_storage_path):
-                os.mkdir(self.main_log_storage_path)
-            name_index = 1
-            final_name = base_name
-            while (final_name in os.listdir(self.main_log_storage_path)):
-                final_name = base_name+'_'+str(name_index)
-                name_index += 1
-            self.exp_log_name = final_name
-            final_name = os.path.join(self.main_log_storage_path, final_name)
-            os.mkdir(final_name)
-            self.exp_log_path = final_name
-            self.print('Experiment Storage Path: %s'%self.exp_log_path)
+        if self.is_main_process:
+            if self.using_resume:
+                self.exp_log_path = self.args.resume_exp
+                self.exp_log_name = os.path.basename(self.args.resume_exp)
+            else:
+                base_name = self.config.exp_name
+                self.print('Experiment Name: %s'%base_name)
+                if not os.path.exists(self.main_log_storage_path):
+                    os.mkdir(self.main_log_storage_path)
+                name_index = 1
+                final_name = base_name
+                while (final_name in os.listdir(self.main_log_storage_path)):
+                    final_name = base_name+'_'+str(name_index)
+                    name_index += 1
+                self.exp_log_name = final_name
+                final_name = os.path.join(self.main_log_storage_path, final_name)
+                os.mkdir(final_name)
+                self.exp_log_path = final_name
+                self.print('Experiment Storage Path: %s'%self.exp_log_path)
 
     def set_logger(self):
         if self.is_main_process:
             self.logger = mylogger(self.exp_log_name, self.exp_log_path)
+            self.logger_loss = mylogger(self.exp_log_name + '_loss', self.exp_log_path)
 
     def dump_configurations(self):
         if not self.using_resume:
@@ -120,7 +119,7 @@ class Train():
                 # self.print(loss_log)
                 if self.is_main_process:
                     progressbar((i+1)/float(itr_in_epoch), barlenth=40, endstr=loss_log)
-                self.logger.info('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
+                self.logger_loss.info('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
                                   ' '+loss_log)
             self.save_ckpt('last_epoch')
             if self.current_epoch % self.config.training.eval_interval == 0:
@@ -145,12 +144,14 @@ class Train():
                 # self.print(loss_log)
                 if self.is_main_process:
                     progressbar((i + 1) / float(itr_in_epoch), barlenth=40, endstr=loss_log)
-                self.logger.info('epoch ' + str(self.current_epoch) + '/' + str(self.final_epoch) +
+                self.logger_loss.info('epoch ' + str(self.current_epoch) + '/' + str(self.final_epoch) +
                                  ' ' + loss_log)
             self.save_ckpt('last_epoch')
+            self.logger.info('Complete epoch %d, saving last_epoch.pth as last epoch'%self.current_epoch)
             if self.current_epoch % self.config.training.eval_interval == 0:
                 if self.val_loader is None: continue
         self.save_ckpt('fin_epoch')
+        self.logger.info('Saving fin_epoch.pth')
 
     def val(self):
         self.model.eval()
