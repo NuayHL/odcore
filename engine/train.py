@@ -44,10 +44,13 @@ class Train():
     def resume_from_file(self):
         if self.using_resume:
             self.print("Resume Experiment For Training")
-            self.formal_exp = Exp(self.args.resume_exp)
+            self.formal_exp = Exp(self.args.resume_exp,self.is_main_process)
             self.config.merge_from_file(self.formal_exp.get_cfg_path())
+            self.exp_log_path = self.args.resume_exp
+            self.exp_log_name = os.path.basename(self.args.resume_exp)
             self.print('Resume Function not Complete, Exit Training')
             exit()
+            del self.formal_exp
 
     def set_log_path(self):
         if self.is_main_process and not self.using_resume:
@@ -61,7 +64,7 @@ class Train():
                 final_name = base_name+'_'+str(name_index)
                 name_index += 1
             self.exp_log_name = final_name
-            final_name = self.main_log_storage_path+'/'+final_name
+            final_name = os.path.join(self.main_log_storage_path, final_name)
             os.mkdir(final_name)
             self.exp_log_path = final_name
             self.print('Experiment Storage Path: %s'%self.exp_log_path)
@@ -89,7 +92,7 @@ class Train():
         self.load_ckpt()
         assert self.final_epoch > self.start_epoch
         self.load_model_to_GPU()
-        self.batchsize = self.args.batch_size
+        self.batchsize = self.config.training.batch_size
         self.print('Batch size:', self.batchsize)
         self.build_train_dataloader()
         self.build_val_dataloader()
@@ -120,7 +123,7 @@ class Train():
                 self.logger.info('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
                                   ' '+loss_log)
             self.save_ckpt('last_epoch')
-            if self.current_epoch % self.args.eval_interval == 0:
+            if self.current_epoch % self.config.training.eval_interval == 0:
                 if self.val_loader is None: continue
         self.save_ckpt('fin_epoch')
 
@@ -145,7 +148,7 @@ class Train():
                 self.logger.info('epoch ' + str(self.current_epoch) + '/' + str(self.final_epoch) +
                                  ' ' + loss_log)
             self.save_ckpt('last_epoch')
-            if self.current_epoch % self.args.eval_interval == 0:
+            if self.current_epoch % self.config.training.eval_interval == 0:
                 if self.val_loader is None: continue
         self.save_ckpt('fin_epoch')
 
@@ -218,7 +221,8 @@ class Train():
         self.train_loader = build_dataloader(self.config.training.train_img_anns_path,
                                              self.config.training.train_img_path,
                                              self.config.data,
-                                             self.batchsize, self.rank, self.args.workers,
+                                             self.batchsize, self.rank,
+                                             self.config.training.workers,
                                              'train')
 
     def build_val_dataloader(self):
@@ -229,7 +233,7 @@ class Train():
                 self.val_loader = build_dataloader(self.config.training.val_img_anns_path,
                                                    self.config.training.val_img_path,
                                                    self.config.data,
-                                                   self.batchsize, -1, self.args.workers,
+                                                   self.batchsize, -1, self.config.training.workers,
                                                    'val')
 
     def build_optimizer(self):
