@@ -7,7 +7,7 @@ from utils.visualization import *
 from utils.misc import *
 from engine.train import Train
 from config import get_default_cfg
-from args import get_args_parser
+from args import get_train_args_parser
 from data.data_augment import *
 cfg = get_default_cfg()
 

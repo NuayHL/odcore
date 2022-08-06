@@ -2,6 +2,7 @@ import torch
 import torch.nn
 import numpy as np
 import cv2
+from copy import deepcopy
 
 from data.data_augment import LetterBox, Resizer
 
@@ -41,6 +42,7 @@ class Infer():
             img_name = 'Happy'
         else:
             raise NotImplementedError("Unknown inputType")
+        ori_img = deepcopy(img)
         sim_sample = {'img':img, 'anns': np.ones((1,4)).astype(np.float32),
                       'ids': [img_name], 'shapes': [(img.shape[1],img.shape[0])]}
         self.letterbox(sim_sample)
@@ -50,5 +52,4 @@ class Infer():
         sim_sample['imgs'] = torch.unsqueeze(sim_sample['imgs'], dim=0)
         sim_sample['imgs'] = sim_sample['imgs'].to(self.device)
         result = self.model(sim_sample)
-        return result[0].to_ori_label((self.config.data.input_width,
-                                      self.config.data.input_height))
+        return result, ori_img

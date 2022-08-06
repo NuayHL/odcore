@@ -17,25 +17,25 @@ class Exp():
         self.cfg_file_name = self.exp_name+'_cfg.yaml'
         self.log_file_name = self.exp_name+'.log'
         if self.args_file_name in files:
-            print(self.args_file_name + ' find')
+            print('\t-'+self.args_file_name + ' find')
         else:
-            print(self.args_file_name + ' not find')
+            print('\t-'+self.args_file_name + ' not find')
             check_flag = False
 
         if self.cfg_file_name in files:
-            print(self.cfg_file_name + ' find')
+            print('\t-'+self.cfg_file_name + ' find')
         else:
-            print(self.cfg_file_name + ' not find')
+            print('\t-'+self.cfg_file_name + ' not find')
             check_flag = False
 
         if self.log_file_name in files:
-            print(self.log_file_name + ' find')
+            print('\t-'+self.log_file_name + ' find')
         else:
-            print(self.log_file_name + ' not find')
+            print('\t-'+self.log_file_name + ' not find')
             check_flag = False
 
         if 'last_epoch.pth' in files or 'best_epoch.pth' in files:
-            print('Checkpoint files find:', end=' ')
+            print('\t-'+'Checkpoint files find:', end=' ')
             if 'last_epoch.pth' in files:
                 print('last_epoch.pth')
                 self.ckpt_file_name = 'last_epoch.pth'
@@ -43,7 +43,7 @@ class Exp():
                 print('best_epoch.pth')
                 self.ckpt_file_name = 'best_epoch.pth'
         else:
-            print('Neither Checkpoint files not find')
+            print('\t-'+'Neither Checkpoint files find')
             check_flag = False
 
         if check_flag == False:
