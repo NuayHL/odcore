@@ -3,6 +3,7 @@ import yaml
 
 def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description='Default odcore args', add_help=add_help)
+    parser.add_argument('--resume-exp', default='', type=str, help='resume training from exp path')
     parser.add_argument('--conf-file', default='coco_config.yaml', type=str, help='config file path')
     parser.add_argument('--ckpt-file', default='', type=str, help='load the ckpt file which is compatible with config ')
     parser.add_argument('--fine-tune', default='', type=str, help='load the ckpt file only for model loading')

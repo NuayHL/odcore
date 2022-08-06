@@ -14,6 +14,7 @@ from data.dataloader import build_dataloader
 from utils.ema import ModelEMA
 from utils.exp_storage import mylogger
 from utils.misc import progressbar, loss_dict_to_str
+from utils.exp import Exp
 
 class Train():
     main_log_storage_path = 'running_log'
@@ -26,20 +27,30 @@ class Train():
 
     def pre_exp_setting(self):
         self.is_main_process = True if self.rank in [-1,0] else False
+        self.using_resume = False if self.args.resume_exp == '' else True
+        self.resume_from_file()
         self.set_log_path()
-        self.set_logger()
         if self.args.ckpt_file != '' and self.args.fine_tune != '':
             self.print("Warning: Detect both ckpt_file and fine_tune file, using ckpt_file")
             self.args.fine_tune = ''
         self.dump_configurations()
+        self.set_logger()
         if self.rank == -1:
             self.device = 'cuda'
         else:
             self.device = self.rank
         self.model.set(self.args, self.device)
 
+    def resume_from_file(self):
+        if self.using_resume:
+            self.print("Resume Experiment For Training")
+            self.formal_exp = Exp(self.args.resume_exp)
+            self.config.merge_from_file(self.formal_exp.get_cfg_path())
+            self.print('Resume Function not Complete, Exit Training')
+            exit()
+
     def set_log_path(self):
-        if self.is_main_process:
+        if self.is_main_process and not self.using_resume:
             base_name = self.config.exp_name
             self.print('Experiment Name: %s'%base_name)
             if not os.path.exists(self.main_log_storage_path):
@@ -60,8 +71,9 @@ class Train():
             self.logger = mylogger(self.exp_log_name, self.exp_log_path)
 
     def dump_configurations(self):
-        self.config.dump_to_file(self.exp_log_name+"_cfg", self.exp_log_path)
-        self.args_to_file(self.exp_log_name+'_args', self.exp_log_path)
+        if not self.using_resume:
+            self.config.dump_to_file(self.exp_log_name+"_cfg", self.exp_log_path)
+            self.args_to_file(self.exp_log_name+'_args', self.exp_log_path)
 
     def args_to_file(self, yaml_name='args', path=''):
         arg_dict = vars(self.args)
