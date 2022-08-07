@@ -80,12 +80,19 @@ class Train():
                 if not self.formal_exp.log_loss_file_name:
                     self.print('Making a new loss log file')
                 self.logger.info('Prepare for resume training, modifying loss log')
-                self.ori_loss_log_name = self.exp_loss_log_name
+                self.formal_loss_log_name = self.exp_loss_log_name
                 name_index = 1
-                while self.exp_loss_log_name in self.formal_exp.get_exp_files():
-                    self.exp_loss_log_name = self.ori_loss_log_name +
+                while self.formal_loss_log_name in self.formal_exp.get_exp_files():
+                    self.formal_loss_log_name = self.exp_loss_log_name + '_' + str(name_index)
+                with open(os.path.join(self.exp_log_path, self.exp_loss_log_name+'.log'), 'r') as fn:
+                    loss_log = fn.read()
+                with open(os.path.join(self.exp_log_path, self.formal_loss_log_name+'.log'), 'w') as fo:
+                    fo.write(loss_log)
+                with open(os.path.join(self.exp_log_path, self.exp_loss_log_name + '.log'), 'w') as fn:
+                    print('Resume Training Loss Recording...', file=fn)
+                self.logger.info("Save the old loss log to %s"%self.formal_loss_log_name)
             self.logger_loss = mylogger(self.exp_loss_log_name, self.exp_log_path)
-            del self.ori_loss_log_name
+            del self.formal_loss_log_name
             del self.formal_exp
 
     def dump_configurations(self):
