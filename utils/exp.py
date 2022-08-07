@@ -17,11 +17,12 @@ class Exp():
         self.args_file_name = self.exp_name+'_args.yaml'
         self.cfg_file_name = self.exp_name+'_cfg.yaml'
         self.log_file_name = self.exp_name+'.log'
+        self.log_loss_file_name = self.exp_name+'_loss.log'
         if self.args_file_name in files:
             self.print('\t-'+self.args_file_name + ' find')
         else:
             self.print('\t-'+self.args_file_name + ' not find')
-            check_flag = False
+            self.args_file_name = False
 
         if self.cfg_file_name in files:
             self.print('\t-'+self.cfg_file_name + ' find')
@@ -33,7 +34,14 @@ class Exp():
             self.print('\t-'+self.log_file_name + ' find')
         else:
             self.print('\t-'+self.log_file_name + ' not find')
-            check_flag = False
+
+            self.log_file_name = False
+
+        if self.log_loss_file_name in files:
+            self.print('\t-Warning: '+self.log_loss_file_name + ' find')
+        else:
+            self.print('\t-Warning: '+self.log_loss_file_name + ' not find')
+            self.log_loss_file_name = False
 
         if 'last_epoch.pth' in files or 'best_epoch.pth' in files:
             self.print('\t-'+'Checkpoint files find:', end=' ')
@@ -50,12 +58,16 @@ class Exp():
         if check_flag == False:
             self.print('Exp file incomplete')
             raise FileNotFoundError('Exp file incomplete')
+        self.files = files
 
     def get_cfg_path(self):
         return os.path.join(self.exp_path,self.cfg_file_name)
 
     def get_ckpt_file_path(self):
         return os.path.join(self.exp_path, self.ckpt_file_name)
+
+    def get_exp_files(self):
+        return self.files
 
     def print(self, *args, **kwargs):
         if self.is_main_process:

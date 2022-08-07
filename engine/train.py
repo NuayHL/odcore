@@ -45,12 +45,14 @@ class Train():
             self.print("Resume Experiment For Training")
             self.formal_exp = Exp(self.args.resume_exp,self.is_main_process)
             self.config.merge_from_file(self.formal_exp.get_cfg_path())
+            self.args.ckpt_file = self.formal_exp.get_ckpt_file_path()
 
     def set_log_path(self):
         if self.is_main_process:
             if self.using_resume:
                 self.exp_log_path = self.args.resume_exp
                 self.exp_log_name = os.path.basename(self.args.resume_exp)
+                self.exp_loss_log_name = self.exp_log_name + '_loss'
             else:
                 base_name = self.config.exp_name
                 self.print('Experiment Name: %s'%base_name)
@@ -62,6 +64,7 @@ class Train():
                     final_name = base_name+'_'+str(name_index)
                     name_index += 1
                 self.exp_log_name = final_name
+                self.exp_loss_log_name = final_name + '_loss'
                 final_name = os.path.join(self.main_log_storage_path, final_name)
                 os.mkdir(final_name)
                 self.exp_log_path = final_name
@@ -69,8 +72,21 @@ class Train():
 
     def set_logger(self):
         if self.is_main_process:
+            if self.using_resume:
+                if not self.formal_exp.log_file_name:
+                    self.print('Making a new log file')
             self.logger = mylogger(self.exp_log_name, self.exp_log_path)
-            self.logger_loss = mylogger(self.exp_log_name + '_loss', self.exp_log_path)
+            if self.using_resume:
+                if not self.formal_exp.log_loss_file_name:
+                    self.print('Making a new loss log file')
+                self.logger.info('Prepare for resume training, modifying loss log')
+                self.ori_loss_log_name = self.exp_loss_log_name
+                name_index = 1
+                while self.exp_loss_log_name in self.formal_exp.get_exp_files():
+                    self.exp_loss_log_name = self.ori_loss_log_name +
+            self.logger_loss = mylogger(self.exp_loss_log_name, self.exp_log_path)
+            del self.ori_loss_log_name
+            del self.formal_exp
 
     def dump_configurations(self):
         if not self.using_resume:
