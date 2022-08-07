@@ -78,21 +78,28 @@ class Train():
             self.logger = mylogger(self.exp_log_name, self.exp_log_path)
             if self.using_resume:
                 if not self.formal_exp.log_loss_file_name:
-                    self.print('Making a new loss log file')
-                self.logger.info('Prepare for resume training, modifying loss log')
-                self.formal_loss_log_name = self.exp_loss_log_name
-                name_index = 1
-                while self.formal_loss_log_name in self.formal_exp.get_exp_files():
-                    self.formal_loss_log_name = self.exp_loss_log_name + '_' + str(name_index)
-                with open(os.path.join(self.exp_log_path, self.exp_loss_log_name+'.log'), 'r') as fn:
-                    loss_log = fn.read()
-                with open(os.path.join(self.exp_log_path, self.formal_loss_log_name+'.log'), 'w') as fo:
-                    fo.write(loss_log)
-                with open(os.path.join(self.exp_log_path, self.exp_loss_log_name + '.log'), 'w') as fn:
-                    print('Resume Training Loss Recording...', file=fn)
-                self.logger.info("Save the old loss log to %s"%self.formal_loss_log_name)
+                    self.print('Making a new loss log file for Resume Training')
+                    with open(os.path.join(self.exp_log_path, self.exp_loss_log_name + '.log'), 'w') as fn:
+                        print("Make new loss log for Resume Training")
+                else:
+                    self.print('Prepare for resume training, modifying loss log')
+                    self.logger.info('Prepare for resume training, modifying loss log')
+                    self.formal_loss_log_name = self.exp_loss_log_name
+                    name_index = 1
+                    while self.formal_loss_log_name+'.log' in self.formal_exp.get_exp_files():
+                        self.formal_loss_log_name = self.exp_loss_log_name + '_' + str(name_index)
+                        name_index += 1
+                    with open(os.path.join(self.exp_log_path, self.exp_loss_log_name+'.log'), 'r') as fn:
+                        loss_log = fn.read()
+                    with open(os.path.join(self.exp_log_path, self.formal_loss_log_name+'.log'), 'w') as fo:
+                        fo.write(loss_log)
+                    with open(os.path.join(self.exp_log_path, self.exp_loss_log_name + '.log'), 'w') as fn:
+                        print('Resume Training Loss Recording...Previous log saved in %s'%self.formal_loss_log_name,
+                              file=fn)
+                    self.logger.info("Save the old loss log to %s"%self.formal_loss_log_name)
+                    self.print("Save the old loss log to %s" % self.formal_loss_log_name)
+                    del self.formal_loss_log_name
             self.logger_loss = mylogger(self.exp_loss_log_name, self.exp_log_path)
-            del self.formal_loss_log_name
             del self.formal_exp
 
     def dump_configurations(self):
@@ -145,9 +152,11 @@ class Train():
                 self.logger_loss.info('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
                                   ' '+loss_log)
             self.save_ckpt('last_epoch')
+            self.logger.info('Complete epoch %d, saving last_epoch.pth as last epoch'%self.current_epoch)
             if self.current_epoch % self.config.training.eval_interval == 0:
                 if self.val_loader is None: continue
         self.save_ckpt('fin_epoch')
+        self.logger.info('Saving fin_epoch.pth')
 
     def train(self):
         itr_in_epoch = len(self.train_loader)
