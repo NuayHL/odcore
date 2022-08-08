@@ -101,8 +101,9 @@ class Train():
                     self.logger.info("Save the old loss log to %s"%self.formal_loss_log_name)
                     self.print("Save the old loss log to %s" % self.formal_loss_log_name)
                     del self.formal_loss_log_name
+                del self.formal_exp
             self.logger_loss = mylogger(self.exp_loss_log_name, self.exp_log_path)
-            del self.formal_exp
+
 
     def dump_configurations(self):
         if not self.using_resume:
@@ -157,6 +158,7 @@ class Train():
             self.save_ckpt('last_epoch')
             self.logger.info('Complete epoch %d, saving last_epoch.pth as last epoch'%self.current_epoch)
             if self.current_epoch % self.config.training.eval_interval == 0:
+                self.save_ckpt('epoch_%d'%self.current_epoch)
                 if self.val_loader is None: continue
         self.save_ckpt('fin_epoch')
         self.logger.info('Saving fin_epoch.pth')
