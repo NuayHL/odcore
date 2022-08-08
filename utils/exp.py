@@ -34,7 +34,6 @@ class Exp():
             self.print('\t-'+self.log_file_name + ' find')
         else:
             self.print('\t-'+self.log_file_name + ' not find')
-
             self.log_file_name = False
 
         if self.log_loss_file_name in files:

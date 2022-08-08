@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 import cv2
 import random
@@ -7,12 +8,16 @@ from utils.misc import *
 #Important: The augments are design for xywh label formats
 
 class Normalizer():
-    def __init__(self, config_data):
-        self.mean = np.array(config_data.input_mean)
-        self.std = np.array(config_data.input_std)
+    '''used for batched input tensor with shape batchsize x 3 x h x w'''
+    def __init__(self, config_data, device):
+        self.mean = torch.tensor([[[config_data.input_mean[0]]],
+                                  [[config_data.input_mean[1]]],
+                                  [[config_data.input_mean[2]]]]).to(device)
+        self.std = torch.tensor([[[config_data.input_std[0]]],
+                                 [[config_data.input_std[1]]],
+                                 [[config_data.input_std[2]]]]).to(device)
     def __call__(self, sample):
-        sample['img'] /= 255
-        sample['img'] = (sample['img'] - self.mean)/self.std
+        sample['imgs'] = (sample['imgs'] - self.mean)/self.std
 
 class GeneralAugmenter():
     def __init__(self, config_data):

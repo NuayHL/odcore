@@ -1,3 +1,5 @@
+import torch
+
 from testtools import *
 
 # args = get_args_parser().parse_args()
@@ -29,5 +31,10 @@ from testtools import *
 # #sample['img'],sample['anns']=random_affine(sample['img'],sample['anns'])
 # img, label = mosaic_augmentation((800, 1200), imgs, hs, ws, labels, cfg.data)
 # show_bbox(img, label, type='x1y1wh')
+#
+# draw_loss('testing_2.log')
 
-draw_loss('testing_2.log')
+a = torch.ones((8,3, 5,5))
+b = torch.tensor([[[1]],[[2]],[[3]]])
+c = a-b
+print(c[4,2,:,:])

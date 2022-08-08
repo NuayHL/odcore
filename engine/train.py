@@ -10,6 +10,7 @@ import torch.optim as optim
 
 from config import CN
 from data.dataloader import build_dataloader
+from data.data_augment import Normalizer
 from utils.ema import ModelEMA
 from utils.exp_storage import mylogger
 from utils.misc import progressbar, loss_dict_to_str
@@ -39,6 +40,7 @@ class Train():
         else:
             self.device = self.rank
         self.model.set(self.args, self.device)
+        self.normalizer = Normalizer(self.config.data,self.device)
 
     def resume_from_file(self):
         if self.using_resume:
@@ -140,6 +142,7 @@ class Train():
             for i, samples in enumerate(self.train_loader):
                 self.optimizer.zero_grad()
                 samples['imgs'] = samples['imgs'].to(self.device).float() / 255
+                self.normalizer(samples)
                 with amp.autocast():
                     loss, loss_dict = self.model(samples)
                 loss_log = loss_dict_to_str(loss_dict)

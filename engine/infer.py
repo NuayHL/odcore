@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 from copy import deepcopy
 
-from data.data_augment import LetterBox, Resizer
+from data.data_augment import LetterBox, Normalizer
 
 class Infer():
     def __init__(self, config, args, model, device):
@@ -13,6 +13,7 @@ class Infer():
         self.model = model
         self.device = device
         self.letterbox = LetterBox(config.data)
+        self.normalizer = Normalizer(config.data,self.device)
         self.load_model()
 
     def load_model(self):
@@ -51,5 +52,6 @@ class Infer():
         sim_sample['imgs'] = torch.from_numpy(sim_sample['imgs']).float() / 255
         sim_sample['imgs'] = torch.unsqueeze(sim_sample['imgs'], dim=0)
         sim_sample['imgs'] = sim_sample['imgs'].to(self.device)
+        self.normalizer(sim_sample)
         result = self.model(sim_sample)
         return result, ori_img
