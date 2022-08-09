@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import torch
 from functools import wraps
 
-from utils.misc import progressbar, xywh_x1y1x2y2_
+from utils.misc import progressbar, xywh_x1y1x2y2
 
 # decorator for tran img
 def tran_img(fun):
@@ -79,7 +79,7 @@ def assign_hot_map(anchors, assignments, shape, img=np.zeros((1,1))*255, gt=np.a
     heatmap = np.zeros((shape[0],shape[1]))
     img = _add_bbox_img(img, bboxs=gt, type='xywh')
     lenth = len(anchors)
-    xywh_x1y1x2y2_(anchors)
+    anchors = xywh_x1y1x2y2(anchors)
     for idx,(anchor, assign) in enumerate(zip(anchors, assignments)):
         x1 = int(anchor[0] if anchor[0] > 0 else 0)
         x2 = int(anchor[2] if anchor[2] < shape[1] else shape[1])
