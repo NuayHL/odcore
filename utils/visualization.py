@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import torch
 from functools import wraps
 
-from utils.misc import progressbar
+from utils.misc import progressbar, xywh_x1y1x2y2
 
 # decorator for tran img
 def tran_img(fun):
@@ -75,19 +75,20 @@ def assign_visualization(img, anns, assignresult, anchors, annsidx=None,
     printImg(img)
 
 # hot map of assigned anchors
-def assign_hot_map(anchors, assignments, img=np.zeros((1,1))*255, gt=np.array([[0,0,0,0]])):
-    heatmap = np.zeros((800,1024))
+def assign_hot_map(anchors, assignments, shape, img=np.zeros((1,1))*255, gt=np.array([[0,0,0,0]])):
+    heatmap = np.zeros((shape[0],shape[1]))
     img = _add_bbox_img(img, bboxs=gt, type='x1y1wh')
     lenth = len(anchors)
+    xywh_x1y1x2y2(anchors)
     for idx,(anchor, assign) in enumerate(zip(anchors, assignments)):
         x1 = int(anchor[0] if anchor[0] > 0 else 0)
-        x2 = int(anchor[2] if anchor[2] < 1024 else 1024)
+        x2 = int(anchor[2] if anchor[2] < shape[1] else shape[1])
         y1 = int(anchor[1] if anchor[1] > 0 else 0)
-        y2 = int(anchor[3] if anchor[3] < 800 else 800)
+        y2 = int(anchor[3] if anchor[3] < shape[0] else shape[0])
         if assign == -1:
-            heatmap[y1:y2, x1:x2] += 1
-        elif assign != 0:
             heatmap[y1:y2, x1:x2] += 0
+        elif assign != 0:
+            heatmap[y1:y2, x1:x2] += 1
         else:
             heatmap[y1:y2, x1:x2] += 0
         progressbar(float(idx+1)/lenth)
