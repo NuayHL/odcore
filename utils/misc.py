@@ -71,10 +71,11 @@ def tensorInDict2device(input_dict, device):
             tensorInDict2device(input_dict[key], device)
 
 def progressbar(percentage, endstr='', barlenth=20):
-    if int(percentage)==1: endstr +='\n'
+    endn = ' '
+    if int(percentage)==1: endn ='\n'
     print('\r[' + '>' * int(percentage * barlenth) +
           '-' * (barlenth - int(percentage * barlenth)) + ']',
-          format(percentage * 100, '.1f'), '%', end=' '+endstr)
+          format(percentage * 100, '.1f'), '% ', endstr, end=' '+endn)
 
 def loss_dict_to_str(loss_dict):
     fin_str = '|| '
