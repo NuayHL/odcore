@@ -18,7 +18,7 @@ class Infer():
         self.load_model()
 
     def load_model(self):
-        print('FineTuning Model: ', end='')
+        print('Model Parameters: ', end='')
         if self.args.ckpt_file != '':
             print(self.args.ckpt_file)
             print('\t-Loading:', end=' ')
