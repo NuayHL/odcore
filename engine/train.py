@@ -16,6 +16,10 @@ from utils.exp_storage import mylogger
 from utils.misc import progressbar, loss_dict_to_str
 from utils.exp import Exp
 
+# Set os.environ['CUDA_VISIBLE_DEVICES'] = '-1' and rank = -1 for cpu training
+#
+# model must have method model.set(args, device)
+
 class Train():
     main_log_storage_path = 'running_log'
     def __init__(self, config: CN, args, model: nn.Module, rank):
@@ -27,6 +31,7 @@ class Train():
 
     def pre_exp_setting(self):
         self.is_main_process = True if self.rank in [-1,0] else False
+        self.check_and_set_device()
         self.using_resume = False if self.args.resume_exp == '' else True
         self.resume_from_file()
         self.set_log_path()
@@ -35,12 +40,28 @@ class Train():
             self.args.fine_tune = ''
         self.dump_configurations()
         self.set_logger()
-        if self.rank == -1:
-            self.device = 'cuda'
-        else:
-            self.device = self.rank
         self.model.set(self.args, self.device)
         self.normalizer = Normalizer(self.config.data,self.device)
+
+    def check_and_set_device(self):
+        if self.is_main_process:
+            try:
+                available_device = os.getenv('CUDA_VISIBLE_DEVICES')
+            except:
+                raise
+            available_device = [int(device) for device in available_device.strip().split(',')]
+            if len(available_device) == 1:
+                assert self.rank == -1,'Only find 1 Device, please set rank as -1 for training!'
+                available_device = available_device[0]
+                if available_device == -1:
+                    self.print('Warning: Using Device CPU')
+                    self.device = 'cpu'
+                    return
+            self.print('Find Device:', available_device)
+            self.print('Main Process runs at CUDA:%d'%available_device[0])
+            self.device = 0
+        else:
+            self.device = self.rank
 
     def resume_from_file(self):
         if self.using_resume:
@@ -249,7 +270,6 @@ class Train():
     def load_model_to_GPU(self):
         if self.rank == -1:
             self.model = self.model.to(self.device)
-            self.print("Using Single GPU")
         else:
             self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model).to(self.device)
             self.model = DDP(self.model, device_ids=[self.device], output_device=self.device)
