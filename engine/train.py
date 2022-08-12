@@ -52,13 +52,12 @@ class Train():
             available_device = [int(device) for device in available_device.strip().split(',')]
             if len(available_device) == 1:
                 assert self.rank == -1,'Only find 1 Device, please set rank as -1 for training!'
-                available_device = available_device[0]
-                if available_device == -1:
+                if available_device[0] == -1:
                     self.print('Warning: Using Device CPU')
                     self.device = 'cpu'
                     return
             self.print('Find Device:', available_device)
-            self.print('Main Process runs at CUDA:%d'%available_device)
+            self.print('Main Process runs at CUDA:%d'%available_device[0])
             self.device = 0
         else:
             self.device = self.rank
@@ -127,7 +126,7 @@ class Train():
 
 
     def dump_configurations(self):
-        if not self.using_resume:
+        if not self.using_resume and self.is_main_process:
             self.config.dump_to_file(self.exp_log_name+"_cfg", self.exp_log_path)
             self.args_to_file(self.exp_log_name+'_args', self.exp_log_path)
 
@@ -174,15 +173,17 @@ class Train():
                 # self.print(loss_log)
                 if self.is_main_process:
                     progressbar((i+1)/float(itr_in_epoch), barlenth=40, endstr=loss_log)
-                self.logger_loss.info('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
+                    self.logger_loss.info('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
                                   ' '+loss_log)
-            self.save_ckpt('last_epoch')
-            self.logger.info('Complete epoch %d, saving last_epoch.pth as last epoch'%self.current_epoch)
-            if self.current_epoch % self.config.training.eval_interval == 0:
-                self.save_ckpt('epoch_%d'%self.current_epoch)
-                if self.val_loader is None: continue
-        self.save_ckpt('fin_epoch')
-        self.logger.info('Saving fin_epoch.pth')
+            if self.is_main_process:
+                self.save_ckpt('last_epoch')
+                self.logger.info('Complete epoch %d, saving last_epoch.pth as last epoch'%self.current_epoch)
+                if self.current_epoch % self.config.training.eval_interval == 0:
+                    self.save_ckpt('epoch_%d'%self.current_epoch)
+                    if self.val_loader is None: continue
+        if self.is_main_process:
+            self.save_ckpt('fin_epoch')
+            self.logger.info('Saving fin_epoch.pth')
 
     def train(self):
         itr_in_epoch = len(self.train_loader)
@@ -223,7 +224,7 @@ class Train():
                 ckpt_file = torch.load(self.args.fine_tune)
                 self.model.load_state_dict(ckpt_file['model'])
                 self.print('SUCCESS')
-                self.logger.info('Using FineTuning Model: %s'%self.args.fine_tune)
+                self.log_info('Using FineTuning Model: %s'%self.args.fine_tune)
             except:
                 self.print("FAIL")
                 raise
@@ -245,7 +246,7 @@ class Train():
                     self.ema.ema = ckpt_file['ema']
                     self.ema.updates = ckpt_file['ema_updates']
                 self.print('SUCCESS')
-                self.logger.info('Using Checkpoint: %s'%self.args.ckpt_file)
+                self.log_info('Using Checkpoint: %s'%self.args.ckpt_file)
             except:
                 self.print("FAIL")
                 raise
@@ -253,7 +254,7 @@ class Train():
             self.print("None")
             self.start_epoch = 1
         self.print("Start epoch:", self.start_epoch)
-        self.logger.info("Start Epoch: %d"%self.start_epoch)
+        self.log_info("Start Epoch: %d"%self.start_epoch)
 
     def save_ckpt(self, file_name):
         if self.is_main_process:
@@ -328,6 +329,10 @@ class Train():
     def print(self, *args, **kwargs):
         if self.is_main_process:
             print(*args, **kwargs)
+
+    def log_info(self,*args,**kwargs):
+        if hasattr(self,'logger'):
+            self.logger.info(*args,**kwargs)
 
 if __name__ == "__main__":
     pass
