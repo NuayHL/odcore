@@ -58,7 +58,7 @@ class Train():
                     self.device = 'cpu'
                     return
             self.print('Find Device:', available_device)
-            self.print('Main Process runs at CUDA:%d'%available_device[0])
+            self.print('Main Process runs at CUDA:%d'%available_device)
             self.device = 0
         else:
             self.device = self.rank
