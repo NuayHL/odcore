@@ -277,7 +277,8 @@ class Train():
             self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model).to(self.device)
             self.model = DDP(self.model, device_ids=[self.device], output_device=self.device)
             self.print("DDP mode, Using multiGPU")
-        self.ema.ema = self.ema.ema.to(self.device)
+        if self.ema:
+            self.ema.ema = self.ema.ema.to(self.device)
 
     def build_train_dataloader(self):
         self.train_loader = build_dataloader(self.config.training.train_img_anns_path,
