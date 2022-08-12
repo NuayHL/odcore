@@ -1,3 +1,4 @@
+import time
 import math
 import torch
 import torch.nn as nn
@@ -135,7 +136,7 @@ class Train():
         with open(os.path.join(path, yaml_name+'.yaml'),'w') as f:
             yaml.dump(arg_dict, f)
 
-    def go(self):
+    def pre_train_setting(self):
         self.final_epoch = self.config.training.final_epoch
         self.load_finetune_model()
         self.ema = ModelEMA(self.model) if self.is_main_process else None
@@ -148,71 +149,50 @@ class Train():
         self.print('Batch size:', self.batchsize)
         self.build_train_dataloader()
         self.build_val_dataloader()
-        self.print('====================================== GO ======================================')
-        self.train_amp()
+        self.scaler = amp.GradScaler()
+        self.itr_in_epoch = len(self.train_loader)
 
-    def train_amp(self):
-        scaler = amp.GradScaler()
-        itr_in_epoch = len(self.train_loader)
+    def go(self):
+        self.pre_train_setting()
+        self.print('====================================== GO ======================================')
+        self.train()
+
+    def train(self):
         for epoch in range(self.start_epoch, self.final_epoch + 1):
             self.current_epoch = epoch
             self.model.train()
             if self.rank != -1:
                 self.train_loader.sampler.set_epoch(epoch)
             self.print('Epoch: %d/%d'%(self.current_epoch, self.final_epoch))
+            time_epoch_start = time.time()
             for i, samples in enumerate(self.train_loader):
                 self.optimizer.zero_grad()
                 samples['imgs'] = samples['imgs'].to(self.device).float() / 255
                 self.normalizer(samples)
-                with amp.autocast():
+                with amp.autocast(enabled=self.device != 'cpu'):
                     loss, loss_dict = self.model(samples)
                 loss_log = loss_dict_to_str(loss_dict)
-                scaler.scale(loss).backward()
-                scaler.step(self.optimizer)
-                scaler.update()
+                self.scaler.scale(loss).backward()
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
                 if self.ema:
                     self.ema.update(self.model)
-                # self.print(loss_log)
                 if self.is_main_process:
-                    progressbar((i+1)/float(itr_in_epoch), barlenth=40, endstr=loss_log)
+                    progressbar((i+1)/float(self.itr_in_epoch), barlenth=40, endstr=loss_log)
                     self.logger_loss.info('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
                                   ' '+loss_log)
+            time_epoch_end = time.time()
+            self.scheduler.step()
             if self.is_main_process:
                 self.save_ckpt('last_epoch')
-                self.logger.info('Complete epoch %d, saving last_epoch.pth as last epoch'%self.current_epoch)
-                if self.current_epoch % self.config.training.eval_interval == 0:
-                    self.save_ckpt('epoch_%d'%self.current_epoch)
-                    if self.val_loader is None: continue
+                self.logger.info('Complete epoch %d at %.1fmin, saving last_epoch.pth as last epoch'
+                                 %(self.current_epoch,(time_epoch_end-time_epoch_start)/60))
+            if self.current_epoch % self.config.training.eval_interval == 0:
+                self.save_ckpt('epoch_%d'%self.current_epoch)
+                if self.val_loader is None: continue
         if self.is_main_process:
             self.save_ckpt('fin_epoch')
             self.logger.info('Saving fin_epoch.pth')
-
-    def train(self):
-        itr_in_epoch = len(self.train_loader)
-        for epoch in range(self.start_epoch, self.final_epoch + 1):
-            self.current_epoch = epoch
-            self.model.train()
-            if self.rank != -1:
-                self.train_loader.sampler.set_epoch(epoch)
-            self.print('Epoch: %d/%d' % (self.current_epoch, self.final_epoch))
-            for i, samples in enumerate(self.train_loader):
-                self.optimizer.zero_grad()
-                samples['imgs'] = samples['imgs'].to(self.device).float() / 255
-                loss, loss_dict = self.model(samples)
-                loss.backward()
-                self.optimizer.step()
-                loss_log = loss_dict_to_str(loss_dict)
-                # self.print(loss_log)
-                if self.is_main_process:
-                    progressbar((i + 1) / float(itr_in_epoch), barlenth=40, endstr=loss_log)
-                self.logger_loss.info('epoch ' + str(self.current_epoch) + '/' + str(self.final_epoch) +
-                                 ' ' + loss_log)
-            self.save_ckpt('last_epoch')
-            self.logger.info('Complete epoch %d, saving last_epoch.pth as last epoch'%self.current_epoch)
-            if self.current_epoch % self.config.training.eval_interval == 0:
-                if self.val_loader is None: continue
-        self.save_ckpt('fin_epoch')
-        self.logger.info('Saving fin_epoch.pth')
 
     def val(self):
         self.model.eval()

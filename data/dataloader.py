@@ -11,6 +11,7 @@ def build_dataloader(anns_path, img_path, config_data, batch_size, rank, workers
     is_persistent = True if workers > 1 else False
     loader = DataLoader(dataset,
                         batch_size=batch_size,
+                        shuffle=True,
                         num_workers=workers,
                         persistent_workers=is_persistent,
                         collate_fn=dataset.OD_default_collater,
