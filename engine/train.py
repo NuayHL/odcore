@@ -171,12 +171,12 @@ class Train():
                 self.normalizer(samples)
                 with amp.autocast(enabled=self.device != 'cpu'):
                     loss, loss_dict = self.model(samples)
-                loss_log = loss_dict_to_str(loss_dict)
                 self.scaler.scale(loss).backward()
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
                 if self.ema:
                     self.ema.update(self.model)
+                loss_log = loss_dict_to_str(loss_dict)
                 if self.is_main_process:
                     progressbar((i+1)/float(self.itr_in_epoch), barlenth=40, endstr=loss_log)
                     self.logger_loss.info('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
