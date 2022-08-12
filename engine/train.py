@@ -138,9 +138,9 @@ class Train():
     def go(self):
         self.final_epoch = self.config.training.final_epoch
         self.load_finetune_model()
+        self.ema = ModelEMA(self.model) if self.is_main_process else None
         self.build_optimizer()
         self.build_scheduler()
-        self.ema = ModelEMA(self.model) if self.is_main_process else None
         self.load_ckpt()
         assert self.final_epoch > self.start_epoch
         self.load_model_to_GPU()
@@ -277,6 +277,7 @@ class Train():
             self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model).to(self.device)
             self.model = DDP(self.model, device_ids=[self.device], output_device=self.device)
             self.print("DDP mode, Using multiGPU")
+        self.ema.ema = self.ema.ema.to(self.device)
 
     def build_train_dataloader(self):
         self.train_loader = build_dataloader(self.config.training.train_img_anns_path,
