@@ -170,7 +170,7 @@ def draw_loss(file_name,outputImgName="loss"):
                     if loss[str_s+i] != ' ':
                         str_s = str_s + i
                         break
-                for i in range(1,6):
+                for i in range(1,10):
                     if loss[str_s+i] == ' ':
                         str_e = str_s+i
                         break
