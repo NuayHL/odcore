@@ -144,68 +144,69 @@ def _isArrayLike(obj):
     # not working for numpy
     return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
 
+class LossLog():
+    def __init__(self, file_name):
+        self.file_name = file_name
+        with open(file_name, "r") as f:
+            losses = f.readlines()
+        self.loss_list = {}
+        self.index = []
+        r_idx = 0
+        loss_name_flag = 0
+        total_lenth = len(losses)
+        for idx, loss in enumerate(losses):
+            try:
+                if "||" not in loss:
+                    continue
+                if loss_name_flag == 0:
+                    self.loss_name = self._parse_loss_name(loss)
+                    for name in self.loss_name:
+                        self.loss_list[name] = []
+                        print(self.loss_name)
+                    loss_name_flag = 1
+                for name in self.loss_name:
+                    str_s = loss.find(name)
+                    str_s += (len(name) + 1)
+                    for i in range(10):
+                        if loss[str_s + i] != ' ':
+                            str_s = str_s + i
+                            break
+                    for i in range(1, 10):
+                        if loss[str_s + i] == ' ':
+                            str_e = str_s + i
+                            break
+                    self.loss_list[name].append(float(loss[str_s:str_e]))
+            except:
+                print('errorline:', idx)
+                raise
+            self.index.append(r_idx)
+            r_idx += 1
+            progressbar((idx + 1) / float(total_lenth), barlenth=40)
 
-def draw_loss(file_name,outputImgName="loss"):
-    with open(file_name,"r") as f:
-        losses = f.readlines()
-    loss_list = {}
-    index = []
-    loss_name = []
-    r_idx = 0
-    loss_name_flag = 0
-    total_lenth = len(losses)
-    for idx, loss in enumerate(losses):
-        try:
-            if "||" not in loss:
-                continue
-            if loss_name_flag == 0:
-                loss_name = _parse_loss_name(loss)
-                for name in loss_name:
-                    loss_list[name] = []
-                loss_name_flag = 1
-            for name in loss_name:
-                str_s = loss.find(name)
-                str_s += (len(name) + 1)
-                for i in range(6):
-                    if loss[str_s+i] != ' ':
-                        str_s = str_s + i
-                        break
-                for i in range(1,10):
-                    if loss[str_s+i] == ' ':
-                        str_e = str_s+i
-                        break
-                loss_list[name].append(float(loss[str_s:str_e]))
-        except:
-            print('errorline:',idx)
-            raise
-        index.append(r_idx)
-        r_idx += 1
-        progressbar((idx+1)/float(total_lenth), barlenth=40)
-    fig, ax = plt.subplots()
-    for name in loss_name:
-        ax.plot(index, loss_list[name])
-    ax.set(xlabel="Iteration(times)",ylabel="Loss",title="Training Loss for "+file_name)
-    ax.grid()
-    fig.legend(loss_name)
-    savepath = os.path.dirname(file_name)
-    fig.savefig(os.path.join(savepath, (outputImgName+".png")),dpi = 300)
-    plt.show()
+    def draw(self):
+        fig, ax = plt.subplots()
+        for name in self.loss_name:
+            ax.plot(self.index, self.loss_list[name])
+        ax.set(xlabel="Iteration(times)", ylabel="Loss", title="Training Loss for " + self.file_name)
+        ax.grid()
+        fig.legend(self.loss_name)
+        plt.show()
 
-def _parse_loss_name(string: str):
-    loss_name = []
-    start = string.find('||')
-    string = string[(start+1):]
-    while (':' in string):
-        end = string.find(':')
-        start = 0
-        for i in range(2,100):
-            if string[end-i] == ' ':
-                start = end-i+1
-                break
-        loss_name.append(string[start:end])
-        string = string[(end+1):]
-    return loss_name
-
+    @staticmethod
+    def _parse_loss_name(string: str):
+        loss_name = []
+        start = string.find('||')
+        string = string[(start + 1):]
+        while (':' in string):
+            end = string.find(':')
+            start = 0
+            for i in range(2, 100):
+                if string[end - i] == ' ':
+                    start = end - i + 1
+                    break
+            loss_name.append(string[start:end])
+            string = string[(end + 1):]
+        return loss_name
 
 # has a bug
 def draw_loss_epoch(file_name, num_in_epoch, outputImgName="loss per epoch", logpath="trainingLog", savepath="trainingLog/lossV"):
