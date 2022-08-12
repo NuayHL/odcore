@@ -171,7 +171,7 @@ class Train():
                 scaler.step(self.optimizer)
                 scaler.update()
                 if self.ema:
-                    self.ema.updata(self.model)
+                    self.ema.update(self.model)
                 # self.print(loss_log)
                 if self.is_main_process:
                     progressbar((i+1)/float(itr_in_epoch), barlenth=40, endstr=loss_log)
