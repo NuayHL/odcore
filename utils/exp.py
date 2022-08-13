@@ -1,5 +1,6 @@
 import os
 import torch
+from utils.visualization import LossLog
 
 class Exp():
     def __init__(self, exp_file_path, is_main_process):
@@ -58,6 +59,9 @@ class Exp():
             self.print('Exp file incomplete')
             raise FileNotFoundError('Exp file incomplete')
         self.files = files
+        if self.log_loss_file_name:
+            self.print('Checking Loss Log...')
+            self.log_loss_file = LossLog(self.log_loss_file_name)
 
     def get_cfg_path(self):
         return os.path.join(self.exp_path,self.cfg_file_name)

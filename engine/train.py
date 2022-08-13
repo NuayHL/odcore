@@ -16,6 +16,7 @@ from utils.ema import ModelEMA
 from utils.exp_storage import mylogger
 from utils.misc import progressbar, loss_dict_to_str
 from utils.exp import Exp
+from utils.visualization import LossLog
 
 # Set os.environ['CUDA_VISIBLE_DEVICES'] = '-1' and rank = -1 for cpu training
 #
@@ -105,26 +106,22 @@ class Train():
                     with open(os.path.join(self.exp_log_path, self.exp_loss_log_name + '.log'), 'w') as fn:
                         print("Make new loss log for Resume Training")
                 else:
-                    self.print('Prepare for resume training, modifying loss log')
-                    self.logger.info('Prepare for resume training, modifying loss log')
-                    self.formal_loss_log_name = self.exp_loss_log_name
-                    name_index = 1
-                    while self.formal_loss_log_name+'.log' in self.formal_exp.get_exp_files():
-                        self.formal_loss_log_name = self.exp_loss_log_name + '_' + str(name_index)
-                        name_index += 1
-                    with open(os.path.join(self.exp_log_path, self.exp_loss_log_name+'.log'), 'r') as fn:
-                        loss_log = fn.read()
-                    with open(os.path.join(self.exp_log_path, self.formal_loss_log_name+'.log'), 'w') as fo:
-                        fo.write(loss_log)
-                    with open(os.path.join(self.exp_log_path, self.exp_loss_log_name + '.log'), 'w') as fn:
-                        print('Resume Training Loss Recording...Previous log saved in %s'%self.formal_loss_log_name,
-                              file=fn)
-                    self.logger.info("Save the old loss log to %s"%self.formal_loss_log_name)
-                    self.print("Save the old loss log to %s" % self.formal_loss_log_name)
+                    if self.formal_exp.log_loss_file.incomplete_last_epoch:
+                        self.print('Prepare for resume training, modifying loss log')
+                        self.logger.info('Prepare for resume training, modifying loss log')
+                        last_epoch = self.formal_exp.log_loss_file.last_epoch
+                        self.formal_loss_log_name = self.exp_loss_log_name + '_e%d'%last_epoch
+                        name_index = 1
+                        while self.formal_loss_log_name+'.log' in self.formal_exp.get_exp_files():
+                            self.formal_loss_log_name = self.exp_loss_log_name + '_' + str(name_index)
+                            name_index += 1
+                        self.formal_exp.log_loss_file.drop_incomplete_and_write(os.path.join(self.exp_log_path,
+                                                                                             self.formal_loss_log_name+'.log'))
+                        self.logger.info("Save the old loss log to %s"%self.formal_loss_log_name)
+                        self.print("Save the old loss log to %s" % self.formal_loss_log_name)
                     del self.formal_loss_log_name
                 del self.formal_exp
             self.logger_loss = mylogger(self.exp_loss_log_name, self.exp_log_path)
-
 
     def dump_configurations(self):
         if not self.using_resume and self.is_main_process:

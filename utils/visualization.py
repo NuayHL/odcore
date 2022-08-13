@@ -212,6 +212,7 @@ class LossLog():
             r_idx += 1
             progressbar((idx + 1) / float(total_lenth), barlenth=40)
         last_epoch_steps = step_in_epoch
+        self.last_epoch = last_epoch
         if last_epoch_steps != self.itr_in_epoch:
             self.incomplete_last_epoch = True
             print('Incomplete Last Epoch FOUND!')
