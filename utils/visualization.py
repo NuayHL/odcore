@@ -147,43 +147,91 @@ def _isArrayLike(obj):
 class LossLog():
     def __init__(self, file_name):
         self.file_name = file_name
-        with open(file_name, "r") as f:
-            losses = f.readlines()
+        self.read_file()
+
+    def read_file(self):
+        with open(self.file_name, "r") as f:
+            self.losses = f.readlines()
         self.loss_list = {}
+        self.loss_epoch_list = {}
+        self.loss_sum_list = []
+        self.loss_sum_epoch_list = []
         self.index = []
+        self.itr_in_epoch = None
+        self.incomplete_last_epoch = False
+        self.last_epoch_begin_line = 0
         r_idx = 0
-        loss_name_flag = 0
-        total_lenth = len(losses)
-        for idx, loss in enumerate(losses):
+        step_in_epoch = 0
+        last_epoch = None
+        loss_name_get = False
+        total_lenth = len(self.losses)
+        for idx, loss in enumerate(self.losses):
             try:
-                if "||" not in loss:
-                    continue
-                if loss_name_flag == 0:
+                if not self._is_lossline(loss): continue
+                if not loss_name_get:
                     self.loss_name = self._parse_loss_name(loss)
+                    print("Find loss type: ",self.loss_name)
                     for name in self.loss_name:
                         self.loss_list[name] = []
-                        print(self.loss_name)
-                    loss_name_flag = 1
+                        self.loss_epoch_list[name] = []
+                    loss_name_get = True
+
+                current_epoch = self._parse_epoch_from_line(loss)
+                step_in_epoch += 1
+
+                if last_epoch == None:
+                    self.last_epoch_begin_line = idx
+                    last_epoch = current_epoch
+                    self.loss_sum_epoch_list.append(0)
+                    for name in self.loss_epoch_list:
+                        self.loss_epoch_list[name].append(0)
+
+                if current_epoch != last_epoch:
+                    if self.itr_in_epoch == None:
+                        self.itr_in_epoch = step_in_epoch - 1
+                    else:
+                        assert self.itr_in_epoch == step_in_epoch - 1, 'Invalid Log File'
+                    self.last_epoch_begin_line = idx
+                    self.loss_sum_epoch_list.append(0)
+                    for name in self.loss_epoch_list:
+                        self.loss_epoch_list[name].append(0)
+                    step_in_epoch = 1
+                last_epoch = current_epoch
+
+                self.loss_sum_list.append(0)
                 for name in self.loss_name:
-                    str_s = loss.find(name)
-                    str_s += (len(name) + 1)
-                    for i in range(10):
-                        if loss[str_s + i] != ' ':
-                            str_s = str_s + i
-                            break
-                    for i in range(1, 10):
-                        if loss[str_s + i] == ' ':
-                            str_e = str_s + i
-                            break
-                    self.loss_list[name].append(float(loss[str_s:str_e]))
+                    temp_loss = self._parse_loss_from_line(name, loss)
+                    self.loss_list[name].append(temp_loss)
+                    self.loss_sum_list[-1] += temp_loss
+                    self.loss_epoch_list[name][-1] += temp_loss
+                    self.loss_sum_epoch_list[-1] += temp_loss
             except:
                 print('errorline:', idx)
                 raise
             self.index.append(r_idx)
             r_idx += 1
             progressbar((idx + 1) / float(total_lenth), barlenth=40)
+        last_epoch_steps = step_in_epoch
+        if last_epoch_steps != self.itr_in_epoch:
+            self.incomplete_last_epoch = True
+            print('Incomplete Last Epoch FOUND!')
 
-    def draw(self):
+        for key in self.loss_list:
+            self.loss_list[key] = np.array(self.loss_list[key])
+        for key in self.loss_epoch_list:
+            self.loss_epoch_list[key] = np.array(self.loss_epoch_list[key])
+            self.loss_epoch_list[key] /= self.itr_in_epoch
+            if self.incomplete_last_epoch:
+                self.loss_epoch_list[key][-1] *= self.itr_in_epoch / float(last_epoch_steps)
+        self.loss_sum_epoch_list = np.array(self.loss_sum_epoch_list)/self.itr_in_epoch
+        if self.incomplete_last_epoch:
+            self.loss_sum_epoch_list[-1] *= self.itr_in_epoch / float(last_epoch_steps)
+        self.loss_sum_list = np.array(self.loss_sum_list)
+        self.index = np.array(self.index)
+        self.epoch_index = np.arange(len(self.loss_sum_epoch_list))
+        self.total_iter_times = len(self.index)
+
+    def draw_loss(self):
         fig, ax = plt.subplots()
         for name in self.loss_name:
             ax.plot(self.index, self.loss_list[name])
@@ -191,6 +239,39 @@ class LossLog():
         ax.grid()
         fig.legend(self.loss_name)
         plt.show()
+
+    def draw_sum_loss(self):
+        fig, ax = plt.subplots()
+        ax.plot(self.index, self.loss_sum_list)
+        ax.set(xlabel="Iteration(times)", ylabel="Loss", title="Training Loss for " + self.file_name)
+        ax.grid()
+        fig.legend(['total loss'])
+        plt.show()
+
+    def draw_epoch_loss(self):
+        fig, ax = plt.subplots()
+        for name in self.loss_name:
+            ax.plot(self.epoch_index, self.loss_epoch_list[name])
+        ax.set(xlabel="Iteration(times)", ylabel="Loss", title="Average Training Loss per Epoch for " + self.file_name)
+        ax.grid()
+        fig.legend(self.loss_name)
+        plt.show()
+
+    def draw_sum_epoch_loss(self):
+        fig, ax = plt.subplots()
+        ax.plot(self.epoch_index, self.loss_sum_epoch_list)
+        ax.set(xlabel="Epochs", ylabel="Loss", title="Average Training Loss per Epoch for " + self.file_name)
+        ax.grid()
+        fig.legend(['total loss'])
+        plt.show()
+
+    def drop_incomplete_and_write(self, otherfilename):
+        if not self.incomplete_last_epoch: return
+        assert otherfilename != self.file_name
+        with open(otherfilename,'w') as f:
+            f.write(''.join(self.losses))
+        with open(self.file_name,'w') as f:
+            f.write(''.join(self.losses[:self.last_epoch_begin_line]))
 
     @staticmethod
     def _parse_loss_name(string: str):
@@ -208,41 +289,32 @@ class LossLog():
             string = string[(end + 1):]
         return loss_name
 
-# has a bug
-def draw_loss_epoch(file_name, num_in_epoch, outputImgName="loss per epoch", logpath="trainingLog", savepath="trainingLog/lossV"):
-    with open(logpath+"/"+file_name,"r") as f:
-        losses = f.readlines()
-        epoch_loss = 0
-        epoch_count = 1
-        start_idx = 0
-        loss_list = []
-        index = []
-        for i in losses:
-            if "WARNING" in i:
-                continue
-            if start_idx % num_in_epoch == 0:
-                index.append(epoch_count)
-                loss_list.append(epoch_loss / num_in_epoch)
-                epoch_loss = 0
-                epoch_count += 1
-            loss = float(i[(i.rfind(":")+1):])
-            epoch_loss += loss
-            start_idx += 1
-        if start_idx % num_in_epoch != 0:
-            index.append(epoch_count)
-            loss_list.append(epoch_loss / (start_idx % num_in_epoch))
-    index = index[1:]
-    loss_list = loss_list[1:]
-    fig, ax = plt.subplots()
-    ax.plot(index, loss_list)
-    ax.set(xlabel="Epochs",ylabel="Loss",title="Training Loss per epoch for "+file_name)
-    ax.grid()
+    @staticmethod
+    def _parse_epoch_from_line(lossline: str):
+        epoch_s = lossline.find('epoch') + 6
+        epoch_e = lossline.find('/')
+        return int(lossline[epoch_s:epoch_e])
 
-    fig.savefig(savepath+"/"+file_name+"_"+outputImgName+".png")
-    plt.show()
+    @staticmethod
+    def _parse_loss_from_line(name:str, lossline: str):
+        str_s = lossline.find(name)
+        str_s += (len(name) + 1)
+        for i in range(15):
+            if lossline[str_s + i] != ' ':
+                str_s = str_s + i
+                break
+        for i in range(1, 15):
+            if lossline[str_s + i] == ' ':
+                str_e = str_s + i
+                break
+        return float(lossline[str_s:str_e])
+
+    @staticmethod
+    def _is_lossline(lossline:str):
+        if "||" in lossline: return True
+        else: return False
 
 def draw_coco_eval(file_name,save_per_epoch=5, outputImgName="evaluation", logpath="trainingLog", savepath="trainingLog/lossV"):
-
     index = []
     iou = []
     iou_50 = []
