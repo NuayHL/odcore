@@ -16,7 +16,6 @@ from utils.ema import ModelEMA
 from utils.exp_storage import mylogger
 from utils.misc import progressbar, loss_dict_to_str
 from utils.exp import Exp
-from utils.visualization import LossLog
 
 # Set os.environ['CUDA_VISIBLE_DEVICES'] = '-1' and rank = -1 for cpu training
 #
