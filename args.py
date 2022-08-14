@@ -28,7 +28,8 @@ def get_eval_args_parser(add_help=True):
     parser.add_argument('--ckpt-file', default='', type=str, help='load the ckpt file which is compatible with config ')
     parser.add_argument('--device', default='0', type=str, help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--workers', default=8, type=int, help='workers for the loader')
-    parser.add_argument('--batch-size', default=16, type=int, help='batch size for the loader')
+    parser.add_argument('--batch-size', default=32, type=int, help='batch size for the loader')
+    parser.add_argument('--force-eval', action='store_true', help='if force eval')
     return parser
 
 if __name__ == '__main__':

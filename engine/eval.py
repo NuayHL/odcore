@@ -46,34 +46,37 @@ class Eval():
 
     def set_log(self):
         self.log_dir = os.path.dirname(self.args.ckpt_file)
-        self.val_img_result_json_name = self.args.ckpt_file[:-3] + '_evalresult.json'
-        self.val_log_name = self.args.ckpt_file[:-3] + '_fullCOCOresult.log'
+        self.val_img_result_json_name = self.args.ckpt_file[:-4] + '_evalresult.json'
+        self.val_log_name = self.args.ckpt_file[:-4] + '_fullCOCOresult.log'
 
-    def eval(self, result_parse=None):
-        assert result_parse != None,'Please load the parse func for your model output result'
-        self.result_parse = result_parse
-        self.build_eval_loader()
-        self.load_model()
+    def eval(self, result_parse=None, force_eval=True):
         self.set_log()
-        self.model.eval()
-        results = []
-        for i, samples in enumerate(self.loader):
-            samples['imgs'] = samples['imgs'].to(self.device).float() / 255
-            self.normalizer(samples)
-            results.append(self.model(samples))
-            progressbar((i+1)/float(self.itr_in_epoch), barlenth=40)
-        print('Infer Complete, Sorting')
-        self.result_for_json = []
-        for result in results:
-            self.result_for_json.extend(self.result_parse(result))
-        with open(self.val_img_result_json_name, 'w') as f:
-            json.dump(self.result_for_json, f)
-        print('Eval Dataset Result saved in %s'%self.val_img_result_json_name)
-        try:
-            coco_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name)
-        except:
-            print('Error in evaluation')
-            raise
+        result_json_found = os.path.exists(self.val_img_result_json_name)
+        self.build_eval_loader()
+        if not result_json_found: print('Prediction Not Found, Eval the Model')
+        if force_eval or not result_json_found:
+            assert result_parse != None, 'Please load the parse func for your model output result'
+            self.result_parse = result_parse
+            self.load_model()
+            self.model.eval()
+            results = []
+            print('Begin Infer Val Dataset')
+            for i, samples in enumerate(self.loader):
+                samples['imgs'] = samples['imgs'].to(self.device).float() / 255
+                self.normalizer(samples)
+                with torch.no_grad():
+                    results.append(self.model(samples))
+                progressbar((i+1)/float(self.itr_in_epoch), barlenth=40)
+            print('Infer Complete, Sorting')
+            self.result_for_json = []
+            for result in results:
+                self.result_for_json.extend(self.result_parse(result))
+            with open(self.val_img_result_json_name, 'w') as f:
+                json.dump(self.result_for_json, f)
+            print('Prediction Result saved in %s'%self.val_img_result_json_name)
+        else:
+            print('Found Prediction json file %s'%self.val_img_result_json_name)
+        coco_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name)
         print('Full COCO result saved in %s'%self.val_log_name)
 
 def coco_eval(dt, gt:COCO, log_name):
@@ -81,16 +84,23 @@ def coco_eval(dt, gt:COCO, log_name):
     start = time()
     # Print the evaluation result to the log
     ori_std = sys.stdout
-    with open(log_name,"a") as f:
-        sys.stdout = f
-        dt = gt.loadRes(dt)
-        eval = COCOeval(gt, dt, 'bbox')
-        eval.evaluate()
-        eval.accumulate()
-        eval.summarize()
-        print("eval_times:%.2fs"%(time()-start))
-        print("\n")
+    try:
+        with open(log_name,"a") as f:
+            sys.stdout = f
+            dt = gt.loadRes(dt)
+            eval = COCOeval(gt, dt, 'bbox')
+            eval.evaluate()
+            eval.accumulate()
+            eval.summarize()
+            print("eval_times:%.2fs"%(time()-start))
+            print("\n")
+    except:
+        sys.stdout = ori_std
+        print('Error in evaluation')
+        raise
+        #return 0.0, 0.0
     sys.stdout = ori_std
+    print(eval.stats[:2])
     return eval.stats[2:]
 
 def model_inference_coconp(loader, model, config):

@@ -39,7 +39,6 @@ class ModelEMA:
     def update_attr(self, model, include=(), exclude=('process_group', 'reducer')):
         copy_attr(self.ema, model, include, exclude)
 
-
 def copy_attr(a, b, include=(), exclude=()):
     """Copy attributes from one instance and set them to another instance."""
     for k, item in b.__dict__.items():
