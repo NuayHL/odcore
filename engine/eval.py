@@ -1,16 +1,87 @@
 import sys
+import os
+import json
 import torch
 import numpy as np
 from time import time
 from pycocotools.cocoeval import COCOeval
 from pycocotools.coco import COCO
+from data.dataloader import build_dataloader
+from data.data_augment import Normalizer
 from utils.misc import progressbar
 
-def coco_eval(dt, gt:COCO, config, log_name):
+class Eval():
+    def __init__(self, config, args, model, device):
+        self.config = config
+        self.args = args
+        self.model = model
+        self.device = device
+        self.normalizer = Normalizer(config.data, device)
+
+    def build_eval_loader(self):
+        self.loader = build_dataloader(self.config.training.val_img_anns_path,
+                                  self.config.training.val_img_path,
+                                  self.config.data,
+                                  self.args.batch_size,
+                                  -1, self.args.workers, 'val')
+        self.itr_in_epoch = len(self.loader)
+
+    def load_model(self):
+        print('Model Parameters: ', end='')
+        if self.args.ckpt_file != '':
+            print(self.args.ckpt_file)
+            print('\t-Loading:', end=' ')
+            try:
+                ckpt_file = torch.load(self.args.ckpt_file)
+                self.model.load_state_dict(ckpt_file['model'])
+                print('SUCCESS')
+            except:
+                print("FAIL")
+                raise
+            model = self.model.to(self.device)
+            model.eval()
+        else:
+            print('Please indicating one .pth/.pt file!')
+            exit()
+
+    def set_log(self):
+        self.log_dir = os.path.dirname(self.args.ckpt_file)
+        self.val_img_result_json_name = self.args.ckpt_file[:-3] + '_evalresult.json'
+        self.val_log_name = self.args.ckpt_file[:-3] + '_fullCOCOresult.log'
+
+    def eval(self, result_parse=None):
+        assert result_parse != None,'Please load the parse func for your model output result'
+        self.result_parse = result_parse
+        self.build_eval_loader()
+        self.load_model()
+        self.set_log()
+        self.model.eval()
+        results = []
+        for i, samples in enumerate(self.loader):
+            samples['imgs'] = samples['imgs'].to(self.device).float() / 255
+            self.normalizer(samples)
+            results.append(self.model(samples))
+            progressbar((i+1)/float(self.itr_in_epoch), barlenth=40)
+        print('Infer Complete, Sorting')
+        self.result_for_json = []
+        for result in results:
+            self.result_for_json.extend(self.result_parse(result))
+        with open(self.val_img_result_json_name, 'w') as f:
+            json.dump(self.result_for_json, f)
+        print('Eval Dataset Result saved in %s'%self.val_img_result_json_name)
+        try:
+            coco_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name)
+        except:
+            print('Error in evaluation')
+            raise
+        print('Full COCO result saved in %s'%self.val_log_name)
+
+def coco_eval(dt, gt:COCO, log_name):
+    '''return map, map50'''
     start = time()
     # Print the evaluation result to the log
     ori_std = sys.stdout
-    with open(log_name+".txt","a") as f:
+    with open(log_name,"a") as f:
         sys.stdout = f
         dt = gt.loadRes(dt)
         eval = COCOeval(gt, dt, 'bbox')
@@ -20,8 +91,9 @@ def coco_eval(dt, gt:COCO, config, log_name):
         print("eval_times:%.2fs"%(time()-start))
         print("\n")
     sys.stdout = ori_std
+    return eval.stats[2:]
 
-def model_inference_coconp(val_loader, model, config):
+def model_inference_coconp(loader, model, config):
     """
     return a result np.ndarray for COCOeval
     formate: imgidx x1y1wh score class
