@@ -50,6 +50,7 @@ c.training.train_img_path = 'train_img_path'
 c.training.train_img_anns_path = 'train_img_anns_path'
 c.training.val_img_path = 'val_img_path'
 c.training.val_img_anns_path = 'val_img_anns_path'
+c.training.val_metric = 'coco'
 c.training.batch_size = 8
 c.training.final_epoch = 200
 c.training.workers = 4

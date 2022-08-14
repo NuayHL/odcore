@@ -50,14 +50,12 @@ class Eval():
         self.val_img_result_json_name = self.args.ckpt_file[:-4] + '_evalresult.json'
         self.val_log_name = self.args.ckpt_file[:-4] + '_fullCOCOresult.log'
 
-    def eval(self, result_parse=None, force_eval=True):
+    def eval(self, force_eval=True):
         self.set_log()
         result_json_found = os.path.exists(self.val_img_result_json_name)
         self.build_eval_loader()
         if not result_json_found: print('Prediction Not Found, Eval the Model')
         if force_eval or not result_json_found:
-            assert result_parse != None, 'Please load the parse func for your model output result'
-            self.result_parse = result_parse
             self.load_model()
             self.model.eval()
             results = []
@@ -71,7 +69,7 @@ class Eval():
             print('Infer Complete, Sorting')
             self.result_for_json = []
             for result in results:
-                self.result_for_json.extend(self.result_parse(result))
+                self.result_for_json.extend(self.model.coco_parse_result(result))
             with open(self.val_img_result_json_name, 'w') as f:
                 json.dump(self.result_for_json, f)
             print('Prediction Result saved in %s'%self.val_img_result_json_name)
