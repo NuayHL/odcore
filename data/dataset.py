@@ -84,7 +84,7 @@ class CocoDataset(Dataset):
     def load_img(self, idx):
         img = self.annotations.imgs[self.image_id[idx]]
         w0, h0, id = img["width"], img["height"], img["id"]
-        img = cv2.imread(os.path.join(self.imgPath, img["file_name"] + ".jpg"))
+        img = cv2.imread(os.path.join(self.imgPath, img["file_name"]))
         return img, (w0, h0), id
 
     def load_anns(self, idx):
