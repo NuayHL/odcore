@@ -229,7 +229,7 @@ class LossLog():
             self.loss_sum_epoch_list[-1] *= self.itr_in_epoch / float(last_epoch_steps)
         self.loss_sum_list = np.array(self.loss_sum_list)
         self.index = np.array(self.index)
-        self.epoch_index = np.arange(len(self.loss_sum_epoch_list))
+        self.epoch_index = np.arange(len(self.loss_sum_epoch_list)).astype(np.int32)
         self.total_iter_times = len(self.index)
 
     def draw_loss(self):
@@ -253,7 +253,7 @@ class LossLog():
         fig, ax = plt.subplots()
         for name in self.loss_name:
             ax.plot(self.epoch_index, self.loss_epoch_list[name])
-        ax.set(xlabel="Iteration(times)", ylabel="Loss", title="Average Training Loss per Epoch for " + self.file_name)
+        ax.set(xlabel="Epochs", ylabel="Loss", title="Average Training Loss per Epoch for " + self.file_name)
         ax.grid()
         fig.legend(self.loss_name)
         plt.show()
