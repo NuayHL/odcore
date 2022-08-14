@@ -8,6 +8,7 @@ from pycocotools.cocoeval import COCOeval
 from pycocotools.coco import COCO
 from data.dataloader import build_dataloader
 from data.data_augment import Normalizer
+from data.result import Result
 from utils.misc import progressbar
 
 class Eval():
