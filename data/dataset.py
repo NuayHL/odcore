@@ -1,3 +1,4 @@
+import json
 import random
 import cv2
 import os
@@ -6,6 +7,7 @@ import torch
 from pycocotools.coco import COCO
 from copy import deepcopy
 from torch.utils.data import Dataset
+from utils.misc import progressbar
 
 from .data_augment import (
     GeneralAugmenter,
@@ -203,31 +205,23 @@ class Txtdatset(Dataset):
     def _xywh_to_x1y1wh(self, anns):
         pass
 
-def load_single_inferencing_img(img, device):
-    '''
-    Used for inferencing one single img
-    :param img:
-        str: file path
-        np.ndarray: W x H x C
-        torch.Tensor: B x C x W x H
-    :return: Input Tensor viewed as batch_size 1
-    '''
-    if isinstance(img,str):
-        img = cv2.imread(img)
-        img = img[:,:,::-1]
-    elif isinstance(img,torch.Tensor):
-        if torch.cuda.is_available():
-            return img.to(device)
-        else:
-            return img
-    elif isinstance(img,np.ndarray):
-        pass
-    else:
-        raise NotImplementedError("Unknown inputType")
-
-    img = np.transpose(img,(2,0,1))
-    img = torch.from_numpy(img).float()
-    img = torch.unsqueeze(img, dim=0)
-    return img.to(device)
+def check_anno_bbox(coco_style_json):
+    coco_dataset = COCO(coco_style_json)
+    ori_coco_ann = coco_dataset.dataset
+    lenth = float(len(ori_coco_ann["annotations"]))
+    for ann in ori_coco_ann["annotations"]:
+        its_img = coco_dataset.imgs[ann['image_id']]
+        w, h = its_img['width'], its_img['height']
+        bbox = ann['bbox']
+        x2, y2 = bbox[0]+bbox[2], bbox[1]+bbox[3]
+        x2 = x2 if x2<=w else w
+        y2 = y2 if y2<=h else h
+        ann['bbox'][0] = bbox[0] if bbox[0]>=0 else 0
+        ann['bbox'][1] = bbox[1] if bbox[1]>=0 else 0
+        ann['bbox'][2] = x2 - bbox[0]
+        ann['bbox'][3] = y2 - bbox[1]
+        progressbar(ann["id"] / lenth)
+    with open(coco_style_json[:-5] + "_checked.json", "w") as f:
+        json.dump(ori_coco_ann, f)
 
 
