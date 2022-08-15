@@ -45,9 +45,9 @@ def dataset_assign_inspection(dataset, imgid, annsidx=None):
     assign_visualization(img, anns, annsidx)
 
 @tran_img
-def show_bbox(img, bboxs=[], type="xywh",color=[0,0,255],score=None, **kwargs):
+def show_bbox(img, bboxs=[], type="xywh",color=[0,0,255],score=None, thickness=None, **kwargs):
     print('Received bbox:',len(bboxs))
-    img = _add_bbox_img(img, bboxs=bboxs, type=type,color=color,score=score, **kwargs)
+    img = _add_bbox_img(img, bboxs=bboxs, type=type,color=color,score=score, thickness=thickness, **kwargs)
     printImg(img)
 
 @tran_img
@@ -101,7 +101,7 @@ def assign_hot_map(anchors, assignments, shape, img=np.zeros((1,1))*255, gt=np.a
     ax[1].axis('off')
     plt.show()
 
-def _add_bbox_img(img, bboxs=[], type="xywh",color=[0,0,255], score=None, **kwargs):
+def _add_bbox_img(img, bboxs=[], type="xywh",color=[0,0,255], score=None, thickness=None, **kwargs):
     '''
     :param img: str for file path/np.ndarray (w,h,c)
     :param bboxs: one or lists or np.ndarray
@@ -122,6 +122,11 @@ def _add_bbox_img(img, bboxs=[], type="xywh",color=[0,0,255], score=None, **kwar
         import json
         with open("data/categories_coco.json",'r') as fp:
             classname = json.load(fp)
+
+    if thickness == None:
+        shape = img.shape[:2]
+        minlen = min(shape)
+        thickness = int(minlen/600.0)
     for idx, bbox in enumerate(bboxs):
         bbox[0] = int(bbox[0])
         bbox[1] = int(bbox[1])
@@ -131,7 +136,7 @@ def _add_bbox_img(img, bboxs=[], type="xywh",color=[0,0,255], score=None, **kwar
         elif type == "x1y1wh": a, b = (bbox[0],bbox[1]),(bbox[0]+bbox[2],bbox[1]+bbox[3])
         else: a, b = (bbox[0]-int(bbox[2]/2),bbox[1]-int(bbox[3]/2)),(bbox[0]+int(bbox[2]/2),bbox[1]+int(bbox[3]/2))
         img = np.ascontiguousarray(img)
-        img = cv2.rectangle(img,a,b,color, **kwargs)
+        img = cv2.rectangle(img,a,b,color, thickness=thickness, **kwargs)
         if score is not None:
             text = classname[int(score[idx,1].item())]['name']
             text += ":%.2f"%score[idx,0]
