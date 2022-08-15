@@ -16,6 +16,7 @@ from utils.ema import ModelEMA
 from utils.exp_storage import mylogger
 from utils.misc import progressbar, loss_dict_to_str
 from utils.exp import Exp
+from engine.eval import coco_eval
 
 # Set os.environ['CUDA_VISIBLE_DEVICES'] = '-1' and rank = -1 for cpu training
 #
@@ -186,13 +187,31 @@ class Train():
             if self.current_epoch % self.config.training.eval_interval == 0:
                 self.save_ckpt('epoch_%d'%self.current_epoch)
                 if self.val_loader is None: continue
-        if self.is_main_process:
-            self.save_ckpt('fin_epoch')
-            self.logger.info('Saving fin_epoch.pth')
+        self.save_ckpt('fin_epoch')
+        self.log_info('Saving fin_epoch.pth')
 
-    def val(self):
+    def val_coco(self):
+        if self.val_loader == None or not self.is_main_process: return
         self.model.eval()
-        
+        if not hasattr(self, 'map'):
+            self.map = 0.0
+        if not hasattr(self, 'map50'):
+            self.map50 = 0.0
+        results = []
+        self.print('Begin Evaluation')
+        self.log_info('Evaluation begin at epoch %d'%self.current_epoch)
+        time_start = time.time()
+        for i, samples in enumerate(self.val_loader):
+            samples['imgs'] = samples['imgs'].to(self.device).float() / 255
+            self.normalizer(samples)
+            with torch.no_grad():
+                results.append(self.model(samples))
+
+        time_end = time.time()
+        self.print('mAP: %.2f, mAP50: %.2f'%(self.map, self.map50))
+        self.log_info('Evaluation Complete at %.2f s, mAP: %.2f, mAP50: %.2f'
+                      %(time_end-time_start, self.map, self.map50))
+
     def load_finetune_model(self):
         self.print('FineTuning Model: ', end='')
         if self.args.fine_tune != '':
