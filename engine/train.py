@@ -145,7 +145,7 @@ class Train():
         self.batchsize = self.config.training.batch_size
         self.print('Batch size:', self.batchsize)
         self.build_train_dataloader()
-        self.build_val_dataloader()
+        self.val_setting()
         self.scaler = amp.GradScaler()
         self.itr_in_epoch = len(self.train_loader)
 
@@ -186,7 +186,8 @@ class Train():
                                  %(self.current_epoch,(time_epoch_end-time_epoch_start)/60))
             if self.current_epoch % self.config.training.eval_interval == 0:
                 self.save_ckpt('epoch_%d'%self.current_epoch)
-                if self.val_loader is None: continue
+                if self.using_val:
+                    self.valfun()
         self.save_ckpt('fin_epoch')
         self.log_info('Saving fin_epoch.pth')
 
@@ -283,16 +284,26 @@ class Train():
                                              self.config.training.workers,
                                              'train')
 
+    def val_setting(self):
+        if self.config.training.val_img_path == '':
+            self.using_val = False
+        else: self.using_val = True
+        self.build_val_dataloader()
+
     def build_val_dataloader(self):
         if self.is_main_process:
-            if self.config.training.val_img_path == '':
-                self.val_loader = None
-            else:
+            if self.using_val:
+                self.val_type = self.config.training.val_metric
+                if self.val_type == 'coco':
+                    self.valfun = self.val_coco
+                else:
+                    raise NotImplementedError('Invalid Evaluation Metric')
                 self.val_loader = build_dataloader(self.config.training.val_img_anns_path,
                                                    self.config.training.val_img_path,
                                                    self.config.data,
                                                    self.batchsize, -1, self.config.training.workers,
                                                    'val')
+            else: self.val_loader = None
 
     def build_optimizer(self):
         config_opt = self.config.training.optimizer
