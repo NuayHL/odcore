@@ -77,7 +77,7 @@ class Eval():
         coco_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name)
         print('Full COCO result saved in %s'%self.val_log_name)
 
-def coco_eval(dt, gt:COCO, log_name):
+def coco_eval(dt, gt:COCO, log_name, pre_str=None):
     '''return map, map50'''
     start = time()
     # Print the evaluation result to the log
@@ -85,6 +85,7 @@ def coco_eval(dt, gt:COCO, log_name):
     try:
         with open(log_name,"a") as f:
             sys.stdout = f
+            if pre_str: print(pre_str)
             dt = gt.loadRes(dt)
             eval = COCOeval(gt, dt, 'bbox')
             eval.evaluate()
@@ -98,7 +99,6 @@ def coco_eval(dt, gt:COCO, log_name):
         raise
         #return 0.0, 0.0
     sys.stdout = ori_std
-    print(eval.stats[:2])
     return eval.stats[2:]
 
 def model_inference_coconp(loader, model, config):

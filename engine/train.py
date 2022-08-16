@@ -1,4 +1,5 @@
 import time
+import json
 import math
 import torch
 import torch.nn as nn
@@ -182,24 +183,25 @@ class Train():
             self.scheduler.step()
             if self.is_main_process:
                 self.save_ckpt('last_epoch')
-                self.logger.info('Complete epoch %d at %.1fmin, saving last_epoch.pth as last epoch'
+                self.logger.info('Complete epoch %d at %.1f min, saving last_epoch.pth as last ckpt'
                                  %(self.current_epoch,(time_epoch_end-time_epoch_start)/60))
             if self.current_epoch % self.config.training.eval_interval == 0:
                 self.save_ckpt('epoch_%d'%self.current_epoch)
+                self.log_info("Reach eval interval, saving ckpt as epoch_%d"%self.current_epoch)
                 if self.using_val:
                     self.valfun()
-        self.save_ckpt('fin_epoch')
         self.log_info('Saving fin_epoch.pth')
 
     def val_coco(self):
-        if self.val_loader == None or not self.is_main_process: return
+        if not self.is_main_process: return
         self.model.eval()
         if not hasattr(self, 'map'):
             self.map = 0.0
         if not hasattr(self, 'map50'):
             self.map50 = 0.0
+        itr_in_val = len(self.val_loader)
         results = []
-        self.print('Begin Evaluation')
+        self.print('Begin Evaluation:')
         self.log_info('Evaluation begin at epoch %d'%self.current_epoch)
         time_start = time.time()
         for i, samples in enumerate(self.val_loader):
@@ -207,11 +209,24 @@ class Train():
             self.normalizer(samples)
             with torch.no_grad():
                 results.append(self.model(samples))
-
+            progressbar((i + 1) / float(itr_in_val), barlenth=40)
+        result_for_json = []
+        for result in results:
+            result_for_json.extend(self.model.coco_parse_result(result))
+        with open(self.val_temp_json, 'w') as f:
+            json.dump(result_for_json, f)
+        self.map_, self.map50_ = coco_eval(self.val_temp_json,
+                                         self.val_loader.dataset.annotations,
+                                         self.val_log,
+                                         'Epoch:%s'%str(self.current_epoch))
         time_end = time.time()
-        self.print('mAP: %.2f, mAP50: %.2f'%(self.map, self.map50))
+        self.print('mAP: %.2f, mAP50: %.2f'%(self.map_, self.map50_))
         self.log_info('Evaluation Complete at %.2f s, mAP: %.2f, mAP50: %.2f'
                       %(time_end-time_start, self.map, self.map50))
+        if self.map50_ > self.map50:
+            self.save_model('best_epoch')
+            self.map, self.map50 = self.map_, self.map50_
+
 
     def load_finetune_model(self):
         self.print('FineTuning Model: ', end='')
@@ -295,23 +310,24 @@ class Train():
     def val_setting(self):
         if self.config.training.val_img_path == '':
             self.using_val = False
+            self.val_temp_json = os.path.join(self.exp_log_path, 'temp_predictions.json')
+            self.val_log = os.path.join(self.exp_log_path, self.exp_log_name + '_val.log')
+            self.val_type = self.config.training.val_metric
+            if self.val_type == 'coco':
+                self.valfun = self.val_coco
+            else:
+                raise NotImplementedError('Invalid Evaluation Metric')
         else: self.using_val = True
         self.build_val_dataloader()
 
     def build_val_dataloader(self):
-        if self.is_main_process:
-            if self.using_val:
-                self.val_type = self.config.training.val_metric
-                if self.val_type == 'coco':
-                    self.valfun = self.val_coco
-                else:
-                    raise NotImplementedError('Invalid Evaluation Metric')
-                self.val_loader = build_dataloader(self.config.training.val_img_anns_path,
-                                                   self.config.training.val_img_path,
-                                                   self.config.data,
-                                                   self.batchsize, -1, self.config.training.workers,
-                                                   'val')
-            else: self.val_loader = None
+        if self.is_main_process and self.using_val:
+            self.val_loader = build_dataloader(self.config.training.val_img_anns_path,
+                                               self.config.training.val_img_path,
+                                               self.config.data,
+                                               self.batchsize, -1, self.config.training.workers,
+                                               'val')
+        else: self.val_loader = None
 
     def build_optimizer(self):
         config_opt = self.config.training.optimizer
