@@ -266,6 +266,14 @@ class Train():
             ckpt['ema_updates'] = self.ema.updates
             torch.save(ckpt, self.exp_log_path+'/'+file_name+'.pth')
 
+    def save_model(self, file_name):
+        if self.is_main_process:
+            self.ema.update_attr(self.model, include=['nc', 'names', 'stride'],)
+            model_parameters = {}
+            model_parameters['last_epoch'] = self.current_epoch
+            model_parameters['model'] = self.model.state_dict()
+            torch.save(model_parameters, self.exp_log_path+'/'+file_name+'.pth')
+
     def load_model_to_GPU(self):
         if self.rank == -1:
             self.model = self.model.to(self.device)
