@@ -154,6 +154,7 @@ class Train():
         self.pre_train_setting()
         self.print('====================================== GO ======================================')
         self.train()
+        self.print('=================================== Complete! ==================================')
 
     def train(self):
         for epoch in range(self.start_epoch, self.final_epoch + 1):
@@ -170,15 +171,12 @@ class Train():
                 with amp.autocast(enabled=self.device != 'cpu'):
                     loss, loss_dict = self.model(samples)
                 self.scaler.scale(loss).backward()
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
-                if self.ema:
-                    self.ema.update(self.model)
                 loss_log = loss_dict_to_str(loss_dict)
                 if self.is_main_process:
                     progressbar((i+1)/float(self.itr_in_epoch), barlenth=40, endstr=loss_log)
                     self.logger_loss.info('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
                                   ' '+loss_log)
+                self.step_and_update()
             time_epoch_end = time.time()
             self.scheduler.step()
             if self.is_main_process:
@@ -190,43 +188,12 @@ class Train():
                 self.log_info("Reach eval interval, saving ckpt as epoch_%d"%self.current_epoch)
                 if self.using_val:
                     self.valfun()
-        self.log_info('Saving fin_epoch.pth')
 
-    def val_coco(self):
-        if not self.is_main_process: return
-        self.model.eval()
-        if not hasattr(self, 'map'):
-            self.map = 0.0
-        if not hasattr(self, 'map50'):
-            self.map50 = 0.0
-        itr_in_val = len(self.val_loader)
-        results = []
-        self.print('Begin Evaluation:')
-        self.log_info('Evaluation begin at epoch %d'%self.current_epoch)
-        time_start = time.time()
-        for i, samples in enumerate(self.val_loader):
-            samples['imgs'] = samples['imgs'].to(self.device).float() / 255
-            self.normalizer(samples)
-            with torch.no_grad():
-                results.append(self.model(samples))
-            progressbar((i + 1) / float(itr_in_val), barlenth=40)
-        result_for_json = []
-        for result in results:
-            result_for_json.extend(self.model.coco_parse_result(result))
-        with open(self.val_temp_json, 'w') as f:
-            json.dump(result_for_json, f)
-        self.map_, self.map50_ = coco_eval(self.val_temp_json,
-                                         self.val_loader.dataset.annotations,
-                                         self.val_log,
-                                         'Epoch:%s'%str(self.current_epoch))
-        time_end = time.time()
-        self.print('mAP: %.2f, mAP50: %.2f'%(self.map_, self.map50_))
-        self.log_info('Evaluation Complete at %.2f s, mAP: %.2f, mAP50: %.2f'
-                      %(time_end-time_start, self.map, self.map50))
-        if self.map50_ > self.map50:
-            self.save_model('best_epoch')
-            self.map, self.map50 = self.map_, self.map50_
-
+    def step_and_update(self):
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
+        if self.ema:
+            self.ema.update(self.model)
 
     def load_finetune_model(self):
         self.print('FineTuning Model: ', end='')
@@ -328,6 +295,41 @@ class Train():
                                                self.batchsize, -1, self.config.training.workers,
                                                'val')
         else: self.val_loader = None
+
+    def val_coco(self):
+        if not self.is_main_process: return
+        self.model.eval()
+        if not hasattr(self, 'map'):
+            self.map = 0.0
+        if not hasattr(self, 'map50'):
+            self.map50 = 0.0
+        itr_in_val = len(self.val_loader)
+        results = []
+        self.print('Begin Evaluation:')
+        self.log_info('Evaluation begin at epoch %d'%self.current_epoch)
+        time_start = time.time()
+        for i, samples in enumerate(self.val_loader):
+            samples['imgs'] = samples['imgs'].to(self.device).float() / 255
+            self.normalizer(samples)
+            with torch.no_grad():
+                results.append(self.model(samples))
+            progressbar((i + 1) / float(itr_in_val), barlenth=40)
+        result_for_json = []
+        for result in results:
+            result_for_json.extend(self.model.coco_parse_result(result))
+        with open(self.val_temp_json, 'w') as f:
+            json.dump(result_for_json, f)
+        self.map_, self.map50_ = coco_eval(self.val_temp_json,
+                                         self.val_loader.dataset.annotations,
+                                         self.val_log,
+                                         'Epoch:%s'%str(self.current_epoch))
+        time_end = time.time()
+        self.print('mAP: %.2f, mAP50: %.2f'%(self.map_, self.map50_))
+        self.log_info('Evaluation Complete at %.2f s, mAP: %.2f, mAP50: %.2f'
+                      %(time_end-time_start, self.map, self.map50))
+        if self.map50_ > self.map50:
+            self.save_model('best_epoch')
+            self.map, self.map50 = self.map_, self.map50_
 
     def build_optimizer(self):
         config_opt = self.config.training.optimizer
