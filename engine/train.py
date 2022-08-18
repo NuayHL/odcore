@@ -59,7 +59,7 @@ class Train():
                     self.print('Warning: Using Device CPU')
                     self.device = 'cpu'
                     return
-            self.print('Find Device:', available_device)
+            self.print('Set Available Device:', available_device)
             self.print('Main Process runs at CUDA:%d'%available_device[0])
             self.device = 0
         else:

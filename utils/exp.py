@@ -38,7 +38,7 @@ class Exp():
             self.log_file_name = False
 
         if self.log_loss_file_name in files:
-            self.print(self.log_loss_file_name + ' find')
+            self.print('\t-'+self.log_loss_file_name + ' find')
         else:
             self.print('\t-Warning: '+self.log_loss_file_name + ' not find')
             self.log_loss_file_name = False
