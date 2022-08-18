@@ -218,9 +218,15 @@ class LossLog():
             progressbar((idx + 1) / float(total_lenth), barlenth=40)
         last_epoch_steps = step_in_epoch
         self.last_epoch = last_epoch
-        if last_epoch_steps != self.itr_in_epoch:
-            self.incomplete_last_epoch = True
-            print('Incomplete Last Epoch FOUND!')
+        if self.itr_in_epoch == None:
+            print("Warning: The first epoch of the experiments seems not complete! "
+                  "Please check if exist last_epoch.pth in experiment files.")
+            self.itr_in_epoch = last_epoch_steps
+            self.incomplete_last_epoch = False
+        else:
+            if last_epoch_steps != self.itr_in_epoch:
+                self.incomplete_last_epoch = True
+                print('Incomplete Last Epoch FOUND!')
 
         for key in self.loss_list:
             self.loss_list[key] = np.array(self.loss_list[key])

@@ -61,7 +61,7 @@ class Exp():
         self.files = files
         if self.log_loss_file_name:
             self.print('Checking Loss Log...')
-            self.log_loss_file = LossLog(self.log_loss_file_name)
+            self.log_loss_file = LossLog(os.path.join(self.exp_path,self.log_loss_file_name))
 
     def get_cfg_path(self):
         return os.path.join(self.exp_path,self.cfg_file_name)

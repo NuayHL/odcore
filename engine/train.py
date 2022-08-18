@@ -120,7 +120,7 @@ class Train():
                                                                                              self.formal_loss_log_name+'.log'))
                         self.logger.info("Save the old loss log to %s"%self.formal_loss_log_name)
                         self.print("Save the old loss log to %s" % self.formal_loss_log_name)
-                    del self.formal_loss_log_name
+                        del self.formal_loss_log_name
                 del self.formal_exp
             self.logger_loss = mylogger(self.exp_loss_log_name, self.exp_log_path)
 
@@ -142,7 +142,8 @@ class Train():
         self.build_scheduler()
         self.load_ckpt()
         assert self.final_epoch > self.start_epoch
-        self.load_model_to_GPU()
+        self.load_model_to_device()
+        self.load_optimizer_to_device()
         self.batchsize = self.config.training.batch_size
         self.print('Batch size:', self.batchsize)
         self.build_train_dataloader()
@@ -185,9 +186,13 @@ class Train():
                                  %(self.current_epoch,(time_epoch_end-time_epoch_start)/60))
             if self.current_epoch % self.config.training.eval_interval == 0:
                 self.save_ckpt('epoch_%d'%self.current_epoch)
-                self.log_info("Reach eval interval, saving ckpt as epoch_%d"%self.current_epoch)
+                self.log_info("Reach eval interval, saving ckpt as epoch_%d.pth"%self.current_epoch)
                 if self.using_val:
-                    self.valfun()
+                    try:
+                        self.valfun()
+                    except:
+                        self.print("Error during eval..")
+                        self.log_info("Error during eval :(")
 
     def step_and_update(self):
         self.scaler.step(self.optimizer)
@@ -256,15 +261,30 @@ class Train():
             model_parameters['model'] = self.model.state_dict()
             torch.save(model_parameters, self.exp_log_path+'/'+file_name+'.pth')
 
-    def load_model_to_GPU(self):
+    def load_model_to_device(self):
         if self.rank == -1:
             self.model = self.model.to(self.device)
         else:
             self.model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.model).to(self.device)
             self.model = DDP(self.model, device_ids=[self.device], output_device=self.device)
             self.print("DDP mode, Using multiGPU")
+            self.log_info("DDO mode, Using MultiGPU")
         if self.ema:
             self.ema.ema = self.ema.ema.to(self.device)
+
+    def load_optimizer_to_device(self):
+        for param in self.optimizer.state.values():
+            # Not sure there are any global tensors in the state dict
+            if isinstance(param, torch.Tensor):
+                param.data = param.data.to(self.device)
+                if param._grad is not None:
+                    param._grad.data = param._grad.data.to(self.device)
+            elif isinstance(param, dict):
+                for subparam in param.values():
+                    if isinstance(subparam, torch.Tensor):
+                        subparam.data = subparam.data.to(self.device)
+                        if subparam._grad is not None:
+                            subparam._grad.data = subparam._grad.data.to(self.device)
 
     def build_train_dataloader(self):
         self.train_loader = build_dataloader(self.config.training.train_img_anns_path,
@@ -275,8 +295,8 @@ class Train():
                                              'train')
 
     def val_setting(self):
-        if self.config.training.val_img_path == '':
-            self.using_val = False
+        if self.config.training.val_img_path != '':
+            self.using_val = True
             self.val_temp_json = os.path.join(self.exp_log_path, 'temp_predictions.json')
             self.val_log = os.path.join(self.exp_log_path, self.exp_log_name + '_val.log')
             self.val_type = self.config.training.val_metric
@@ -284,7 +304,7 @@ class Train():
                 self.valfun = self.val_coco
             else:
                 raise NotImplementedError('Invalid Evaluation Metric')
-        else: self.using_val = True
+        else: self.using_val = False
         self.build_val_dataloader()
 
     def build_val_dataloader(self):
