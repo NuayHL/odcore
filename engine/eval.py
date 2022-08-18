@@ -99,7 +99,7 @@ def coco_eval(dt, gt:COCO, log_name, pre_str=None):
         raise
         #return 0.0, 0.0
     sys.stdout = ori_std
-    return eval.stats[2:]
+    return eval.stats[:2]
 
 def model_inference_coconp(loader, model, config):
     """
