@@ -55,6 +55,7 @@ c.training.batch_size = 8
 c.training.final_epoch = 200
 c.training.workers = 4
 c.training.eval_interval = 20
+c.training.using_autocast = True
 
 c.training.optimizer = CN()
 c.training.optimizer.type = 'SGD'

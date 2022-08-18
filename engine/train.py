@@ -45,6 +45,7 @@ class Train():
         self.set_logger()
         self.model.set(self.args, self.device)
         self.normalizer = Normalizer(self.config.data,self.device)
+        self.using_autocast = self.config.training.using_autocast and self.device != 'cpu'
 
     def check_and_set_device(self):
         if self.is_main_process:
@@ -169,7 +170,7 @@ class Train():
                 self.optimizer.zero_grad()
                 samples['imgs'] = samples['imgs'].to(self.device).float() / 255
                 self.normalizer(samples)
-                with amp.autocast(enabled=self.device != 'cpu'):
+                with amp.autocast(enabled=self.using_autocast):
                     loss, loss_dict = self.model(samples)
                 self.scaler.scale(loss).backward()
                 loss_log = loss_dict_to_str(loss_dict)
@@ -192,7 +193,7 @@ class Train():
                         self.valfun()
                     except:
                         self.print("Error during eval..")
-                        self.log_info("Error during eval :(")
+                        self.log_warn("Error during eval :(")
 
     def step_and_update(self):
         self.scaler.step(self.optimizer)
@@ -389,6 +390,10 @@ class Train():
     def log_info(self,*args,**kwargs):
         if hasattr(self,'logger'):
             self.logger.info(*args,**kwargs)
+
+    def log_warn(self,*args,**kwargs):
+        if hasattr(self,'logger'):
+            self.logger.warning(*args,**kwargs)
 
 if __name__ == "__main__":
     pass
