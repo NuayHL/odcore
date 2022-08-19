@@ -56,6 +56,8 @@ c.training.final_epoch = 200
 c.training.workers = 4
 c.training.eval_interval = 20
 c.training.using_autocast = True
+c.training.warm_up_steps = 1000
+c.training.accumulate = 1
 
 c.training.optimizer = CN()
 c.training.optimizer.type = 'SGD'

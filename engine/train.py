@@ -45,7 +45,6 @@ class Train():
         self.set_logger()
         self.model.set(self.args, self.device)
         self.normalizer = Normalizer(self.config.data,self.device)
-        self.using_autocast = self.config.training.using_autocast and self.device != 'cpu'
 
     def check_and_set_device(self):
         if self.is_main_process:
@@ -145,8 +144,19 @@ class Train():
         assert self.final_epoch > self.start_epoch
         self.load_model_to_device()
         self.load_optimizer_to_device()
+
         self.batchsize = self.config.training.batch_size
-        self.print('Batch size:', self.batchsize)
+        self.accumulate = int(self.config.training.accumulate)
+        self.print('Batch size:%d, Accumulate:%d'%(self.batchsize, self.accumulate))
+        self.print('\t-SimBatch size:%d'%(self.batchsize * self.accumulate))
+        self.using_autocast = self.config.training.using_autocast and self.device != 'cpu'
+        self.print('Using autocast:', self.using_autocast)
+        self.using_warm_up = True if self.config.trianing.warn_up_steps != 0 else False
+        self.print('Using warmup:', self.using_warm_up)
+        self.warm_up_steps = max(500, self.config.trianing.warn_up_steps)
+        if self.using_warm_up:
+            self.print('Warming step:', self.warm_up_steps)
+
         self.build_train_dataloader()
         self.val_setting()
         self.scaler = amp.GradScaler()
@@ -200,6 +210,18 @@ class Train():
         self.scaler.update()
         if self.ema:
             self.ema.update(self.model)
+
+    def warm_up_setting(self):
+        if not hasattr(self,'current_step'):
+            self.current_step = 1
+        if self.current_step <= self.warm_up_steps:
+            self.accumulate = max(1, np.interp(self.current_step, [0, self.warm_up_steps], [1, 64 / self.batch_size]).round())
+            for k, param in enumerate(self.optimizer.param_groups):
+                warmup_bias_lr = self.cfg.solver.warmup_bias_lr if k == 2 else 0.0
+                param['lr'] = np.interp(self.current_step, [0, self.warmup_stepnum], [warmup_bias_lr, param['initial_lr'] * self.lf(self.epoch)])
+                if 'momentum' in param:
+                    param['momentum'] = np.interp(self.current_step, [0, self.warmup_stepnum], [self.cfg.solver.warmup_momentum, self.cfg.solver.momentum])
+        self.current_step += 1
 
     def load_finetune_model(self):
         self.print('FineTuning Model: ', end='')
