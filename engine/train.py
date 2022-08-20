@@ -35,16 +35,13 @@ class Train():
     def pre_exp_setting(self):
         self.is_main_process = True if self.rank in [-1,0] else False
         self.check_and_set_device()
-        self.using_resume = False if self.args.resume_exp == '' else True
-        self.resume_from_file()
+        self.check_resume()
         self.set_log_path()
         if self.args.ckpt_file != '' and self.args.fine_tune != '':
             self.print("Warning: Detect both ckpt_file and fine_tune file, using ckpt_file")
             self.args.fine_tune = ''
         self.dump_configurations()
         self.set_logger()
-        self.model.set(self.args, self.device)
-        self.normalizer = Normalizer(self.config.data,self.device)
 
     def check_and_set_device(self):
         if self.is_main_process:
@@ -65,7 +62,8 @@ class Train():
         else:
             self.device = self.rank
 
-    def resume_from_file(self):
+    def check_resume(self):
+        self.using_resume = False if self.args.resume_exp == '' else True
         if self.using_resume:
             self.print("Resume Experiment For Training")
             self.formal_exp = Exp(self.args.resume_exp,self.is_main_process)
@@ -134,7 +132,16 @@ class Train():
         with open(os.path.join(path, yaml_name+'.yaml'),'w') as f:
             yaml.dump(arg_dict, f)
 
+    def go(self):
+        self.pre_train_setting()
+        self.print('====================================== GO ======================================')
+        self.train()
+        self.print('=================================== Complete! ==================================')
+
     def pre_train_setting(self):
+        self.model.set(self.args, self.device)
+        self.normalizer = Normalizer(self.config.data,self.device)
+
         self.final_epoch = self.config.training.final_epoch
         self.load_finetune_model()
         self.ema = ModelEMA(self.model) if self.is_main_process else None
@@ -155,19 +162,13 @@ class Train():
         self.print('Using warmup:', self.using_warm_up)
         self.warm_up_steps = max(500, self.config.trianing.warn_up_steps)
         if self.using_warm_up:
-            self.print('Warming step:', self.warm_up_steps)
+            self.print('\t-Warming step:', self.warm_up_steps)
 
         self.build_train_dataloader()
         self.val_setting()
         self.scaler = amp.GradScaler()
         self.itr_in_epoch = len(self.train_loader)
         self.current_step = 0
-
-    def go(self):
-        self.pre_train_setting()
-        self.print('====================================== GO ======================================')
-        self.train()
-        self.print('=================================== Complete! ==================================')
 
     def train(self):
         for epoch in range(self.start_epoch, self.final_epoch + 1):
