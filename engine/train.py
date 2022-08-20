@@ -35,11 +35,8 @@ class Train():
     def pre_exp_setting(self):
         self.is_main_process = True if self.rank in [-1,0] else False
         self.check_and_set_device()
-        self.check_resume()
+        self.check_and_set_train_type()
         self.set_log_path()
-        if self.args.ckpt_file != '' and self.args.fine_tune != '':
-            self.print("Warning: Detect both ckpt_file and fine_tune file, using ckpt_file")
-            self.args.fine_tune = ''
         self.dump_configurations()
         self.set_logger()
 
@@ -62,13 +59,38 @@ class Train():
         else:
             self.device = self.rank
 
+    def check_and_set_train_type(self):
+        self.train_type = ''
+        self.using_ckpt = True if self.args.ckpt_file != '' else False
+        self.using_fine_tune = True if self.args.fine_tune != '' else False
+        self.using_resume = True if self.args.resume_exp != '' else False
+        self.check_resume()
+        self.check_ckpt_finetune()
+        self.print('Train Type: ', self.train_type)
+
     def check_resume(self):
-        self.using_resume = False if self.args.resume_exp == '' else True
         if self.using_resume:
-            self.print("Resume Experiment For Training")
+            self.train_type = '[Resume]'
             self.formal_exp = Exp(self.args.resume_exp,self.is_main_process)
             self.config.merge_from_file(self.formal_exp.get_cfg_path())
             self.args.ckpt_file = self.formal_exp.get_ckpt_file_path()
+            self.using_ckpt = True
+            self.using_fine_tune = False
+
+    def check_ckpt_finetune(self):
+        if self.using_resume:
+            return
+        if self.using_ckpt:
+            if self.using_fine_tune:
+                self.print("Warning: Indicating both ckpt_file and fine_tune file, using ckpt_file")
+                self.args.fine_tune = ''
+                self.using_fine_tune = False
+            self.train_type = '[Checkpoint]'
+            return
+        if self.using_fine_tune:
+            self.train_type = '[FineTune]'
+            return
+        self.train_type = '[Scratch]'
 
     def set_log_path(self):
         if self.is_main_process:
@@ -139,6 +161,7 @@ class Train():
         self.print('=================================== Complete! ==================================')
 
     def pre_train_setting(self):
+        self.log_info('Train Type: ', self.train_type)
         self.model.set(self.args, self.device)
         self.normalizer = Normalizer(self.config.data,self.device)
 
@@ -229,7 +252,7 @@ class Train():
 
     def load_finetune_model(self):
         self.print('FineTuning Model: ', end='')
-        if self.args.fine_tune != '':
+        if self.using_fine_tune:
             self.print(self.args.fine_tune)
             self.print('\t-Loading:', end=' ')
             try:
@@ -245,7 +268,7 @@ class Train():
 
     def load_ckpt(self):
         self.print('Checkpoint File:', end=' ')
-        if self.args.ckpt_file != '':
+        if self.using_ckpt:
             self.print(self.args.ckpt_file)
             self.print("\t-Loading:", end=' ')
             try:
@@ -262,7 +285,7 @@ class Train():
             except:
                 self.print("FAIL")
                 raise
-        if self.args.ckpt_file == '':
+        else:
             self.print("None")
             self.start_epoch = 1
         self.print("Start epoch:", self.start_epoch)
