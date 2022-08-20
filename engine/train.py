@@ -245,7 +245,7 @@ class Train():
             for k, param in enumerate(self.optimizer.param_groups):
                 warmup_bias_lr = self.config.training.optimizer.warm_up_init_lr if k == 2 else 0.0
                 param['lr'] = np.interp(self.current_step, [0, self.warm_up_steps],
-                                        [warmup_bias_lr, param['initial_lr'] * self.lrf(self.current_epoch)])
+                                        [warmup_bias_lr, param['initial_lr'] * self.lf(self.current_epoch-1)])
                 if 'momentum' in param:
                     param['momentum'] = np.interp(self.current_step, [0, self.warm_up_steps],
                                                   [self.config.training.optimizer.warm_up_init_momentum, self.config.training.optimizer.momentum])
@@ -431,7 +431,7 @@ class Train():
         else:
             raise NotImplementedError
         self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lf)
-        self.lrf = lf
+        self.lf = lf
 
     def print(self, *args, **kwargs):
         if self.is_main_process:

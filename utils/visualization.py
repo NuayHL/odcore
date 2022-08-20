@@ -326,6 +326,20 @@ class LossLog():
         if "||" in lossline: return True
         else: return False
 
+def draw_scheduler(lf, fin_epoches = 100):
+    sim_optimizer = torch.optim.SGD(torch.nn.Conv2d(1,1,1).parameters(),lr=1)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(sim_optimizer, lr_lambda=lf)
+    index = []
+    lrs = []
+    for e in range(fin_epoches):
+        index.append(e)
+        lrs.append(scheduler.get_lr())
+        scheduler.step()
+    fig, ax = plt.subplots()
+    ax.plot(index, lrs)
+    ax.grid()
+    plt.show()
+
 def draw_coco_eval(file_name,save_per_epoch=5, outputImgName="evaluation", logpath="trainingLog", savepath="trainingLog/lossV"):
     index = []
     iou = []
