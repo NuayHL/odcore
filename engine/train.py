@@ -161,7 +161,7 @@ class Train():
         self.print('=================================== Complete! ==================================')
 
     def pre_train_setting(self):
-        self.log_info('Train Type: ', self.train_type)
+        self.log_info('Train Type: %s'%self.train_type)
         self.model.set(self.args, self.device)
         self.normalizer = Normalizer(self.config.data,self.device)
 
@@ -181,9 +181,9 @@ class Train():
         self.print('\t-SimBatch size:%d'%(self.batchsize * self.accumulate))
         self.using_autocast = self.config.training.using_autocast and self.device != 'cpu'
         self.print('Using autocast:', self.using_autocast)
-        self.using_warm_up = True if self.config.trianing.warn_up_steps != 0 else False
+        self.using_warm_up = True if self.config.training.warm_up_steps != 0 else False
         self.print('Using warmup:', self.using_warm_up)
-        self.warm_up_steps = max(500, self.config.trianing.warn_up_steps)
+        self.warm_up_steps = max(500, self.config.training.warm_up_steps)
         if self.using_warm_up:
             self.print('\t-Warming step:', self.warm_up_steps)
 
