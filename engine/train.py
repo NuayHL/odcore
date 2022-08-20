@@ -190,6 +190,7 @@ class Train():
                     progressbar((i+1)/float(self.itr_in_epoch), barlenth=40, endstr=loss_log)
                     self.logger_loss.info('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
                                   ' '+loss_log)
+                self.warm_up_setting()
                 self.step_and_update()
             time_epoch_end = time.time()
             self.scheduler.step()
@@ -225,6 +226,7 @@ class Train():
                     param['momentum'] = np.interp(self.current_step, [0, self.warm_up_steps],
                                                   [self.config.training.optimizer.warm_up_init_momentum, self.config.training.optimizer.momentum])
         self.current_step += 1
+
 
     def load_finetune_model(self):
         self.print('FineTuning Model: ', end='')
