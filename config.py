@@ -62,6 +62,7 @@ c.training.accumulate = 1
 c.training.optimizer = CN()
 c.training.optimizer.type = 'SGD'
 c.training.optimizer.lr = 0.01
+c.training.optimizer.warm_up_init_lr = 0.00001
 c.training.optimizer.weight_decay = 0.0005
 c.training.optimizer.momentum = 0.937       #SGD
 

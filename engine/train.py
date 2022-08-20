@@ -161,6 +161,7 @@ class Train():
         self.val_setting()
         self.scaler = amp.GradScaler()
         self.itr_in_epoch = len(self.train_loader)
+        self.current_step = 0
 
     def go(self):
         self.pre_train_setting()
@@ -183,6 +184,7 @@ class Train():
                 with amp.autocast(enabled=self.using_autocast):
                     loss, loss_dict = self.model(samples)
                 self.scaler.scale(loss).backward()
+                self.current_step += 1
                 loss_log = loss_dict_to_str(loss_dict)
                 if self.is_main_process:
                     progressbar((i+1)/float(self.itr_in_epoch), barlenth=40, endstr=loss_log)
@@ -206,21 +208,20 @@ class Train():
                         self.log_warn("Error during eval :(")
 
     def step_and_update(self):
-        self.scaler.step(self.optimizer)
-        self.scaler.update()
-        if self.ema:
-            self.ema.update(self.model)
+        if self.accumulate == 1 or self.current_step % self.accumulate == 0:
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
+            if self.ema:
+                self.ema.update(self.model)
 
     def warm_up_setting(self):
-        if not hasattr(self,'current_step'):
-            self.current_step = 1
         if self.current_step <= self.warm_up_steps:
             self.accumulate = max(1, np.interp(self.current_step, [0, self.warm_up_steps], [1, 64 / self.batch_size]).round())
             for k, param in enumerate(self.optimizer.param_groups):
-                warmup_bias_lr = self.cfg.solver.warmup_bias_lr if k == 2 else 0.0
-                param['lr'] = np.interp(self.current_step, [0, self.warmup_stepnum], [warmup_bias_lr, param['initial_lr'] * self.lf(self.epoch)])
+                warmup_bias_lr = self.config.training.optimizer.warm_up_init_lr if k == 2 else 0.0
+                param['lr'] = np.interp(self.current_step, [0, self.warm_up_steps], [warmup_bias_lr, param['initial_lr'] * self.lf(self.epoch)])
                 if 'momentum' in param:
-                    param['momentum'] = np.interp(self.current_step, [0, self.warmup_stepnum], [self.cfg.solver.warmup_momentum, self.cfg.solver.momentum])
+                    param['momentum'] = np.interp(self.current_step, [0, self.warm_up_steps], [self.cfg.solver.warmup_momentum, self.cfg.solver.momentum])
         self.current_step += 1
 
     def load_finetune_model(self):
