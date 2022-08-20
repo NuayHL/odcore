@@ -225,8 +225,6 @@ class Train():
                 if 'momentum' in param:
                     param['momentum'] = np.interp(self.current_step, [0, self.warm_up_steps],
                                                   [self.config.training.optimizer.warm_up_init_momentum, self.config.training.optimizer.momentum])
-        self.current_step += 1
-
 
     def load_finetune_model(self):
         self.print('FineTuning Model: ', end='')
