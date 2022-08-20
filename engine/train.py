@@ -216,12 +216,14 @@ class Train():
 
     def warm_up_setting(self):
         if self.current_step <= self.warm_up_steps:
-            self.accumulate = max(1, np.interp(self.current_step, [0, self.warm_up_steps], [1, 64 / self.batch_size]).round())
+            self.accumulate = max(1, np.interp(self.current_step, [0, self.warm_up_steps], [1, self.accumulate]).round())
             for k, param in enumerate(self.optimizer.param_groups):
                 warmup_bias_lr = self.config.training.optimizer.warm_up_init_lr if k == 2 else 0.0
-                param['lr'] = np.interp(self.current_step, [0, self.warm_up_steps], [warmup_bias_lr, param['initial_lr'] * self.lf(self.epoch)])
+                param['lr'] = np.interp(self.current_step, [0, self.warm_up_steps],
+                                        [warmup_bias_lr, param['initial_lr'] * self.lrf(self.current_epoch)])
                 if 'momentum' in param:
-                    param['momentum'] = np.interp(self.current_step, [0, self.warm_up_steps], [self.cfg.solver.warmup_momentum, self.cfg.solver.momentum])
+                    param['momentum'] = np.interp(self.current_step, [0, self.warm_up_steps],
+                                                  [self.config.training.optimizer.warm_up_init_momentum, self.config.training.optimizer.momentum])
         self.current_step += 1
 
     def load_finetune_model(self):
@@ -405,6 +407,7 @@ class Train():
         else:
             raise NotImplementedError
         self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lf)
+        self.lrf = lf
 
     def print(self, *args, **kwargs):
         if self.is_main_process:

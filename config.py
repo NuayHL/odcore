@@ -65,6 +65,7 @@ c.training.optimizer.lr = 0.01
 c.training.optimizer.warm_up_init_lr = 0.00001
 c.training.optimizer.weight_decay = 0.0005
 c.training.optimizer.momentum = 0.937       #SGD
+c.training.optimizer.warm_up_init_momentum = 0.8
 
 c.training.schedular = CN()
 c.training.schedular.type = 'cosine'
