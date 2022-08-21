@@ -101,7 +101,7 @@ def assign_hot_map(anchors, assignments, shape, img=np.zeros((1,1))*255, gt=np.a
     ax[1].axis('off')
     plt.show()
 
-def _add_point_img(img, points, thickness=None):
+def _add_point_img(img, points, color=[0,0,255], thickness=None):
     img_ = img.copy()
     if thickness == None:
         shape = img.shape[:2]
@@ -110,7 +110,7 @@ def _add_point_img(img, points, thickness=None):
     for idx, point in enumerate(points):
         point_x = int(point[0])
         point_y = int(point[1])
-        img_ = cv2.circle(img_, (point_x, point_y), thickness=thickness)
+        img_ = cv2.circle(img_, (point_x, point_y), radius=1, color=color, thickness=thickness)
     return img_
 
 def _add_bbox_img(img, bboxs=[], type="xywh",color=[0,0,255], score=None, thickness=None, **kwargs):
