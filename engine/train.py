@@ -126,7 +126,7 @@ class Train():
                 if not self.formal_exp.log_loss_file_name:
                     self.print('Making a new loss log file for Resume Training')
                     with open(os.path.join(self.exp_log_path, self.exp_loss_log_name + '.log'), 'w') as fn:
-                        print("Make new loss log for Resume Training")
+                        self.print("Make new loss log for Resume Training")
                 else:
                     if self.formal_exp.log_loss_file.incomplete_last_epoch:
                         self.print('Prepare for resume training, modifying loss log')

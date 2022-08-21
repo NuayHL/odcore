@@ -150,8 +150,9 @@ def _isArrayLike(obj):
     return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
 
 class LossLog():
-    def __init__(self, file_name):
+    def __init__(self, file_name, is_main_process=True):
         self.file_name = file_name
+        self.is_main_process = is_main_process
         self.read_file()
 
     def read_file(self):
@@ -175,7 +176,7 @@ class LossLog():
                 if not self._is_lossline(loss): continue
                 if not loss_name_get:
                     self.loss_name = self._parse_loss_name(loss)
-                    print("Find loss type: ",self.loss_name)
+                    self.print("Find loss type: ",self.loss_name)
                     for name in self.loss_name:
                         self.loss_list[name] = []
                         self.loss_epoch_list[name] = []
@@ -211,22 +212,23 @@ class LossLog():
                     self.loss_epoch_list[name][-1] += temp_loss
                     self.loss_sum_epoch_list[-1] += temp_loss
             except:
-                print('errorline:', idx)
+                self.print('errorline:', idx)
                 raise
             self.index.append(r_idx)
             r_idx += 1
-            progressbar((idx + 1) / float(total_lenth), barlenth=40)
+            if self.is_main_process:
+                progressbar((idx + 1) / float(total_lenth), barlenth=40)
         last_epoch_steps = step_in_epoch
         self.last_epoch = last_epoch
         if self.itr_in_epoch == None:
-            print("Warning: The first epoch of the experiments seems not complete! "
-                  "Please check if exist last_epoch.pth in experiment files.")
+            self.print("Warning: The first epoch of the experiments seems not complete! "
+                       "Please check if exist last_epoch.pth in experiment files.")
             self.itr_in_epoch = last_epoch_steps
             self.incomplete_last_epoch = False
         else:
             if last_epoch_steps != self.itr_in_epoch:
                 self.incomplete_last_epoch = True
-                print('Incomplete Last Epoch FOUND!')
+                self.print('Incomplete Last Epoch FOUND!')
 
         for key in self.loss_list:
             self.loss_list[key] = np.array(self.loss_list[key])
@@ -284,6 +286,10 @@ class LossLog():
             f.write(''.join(self.losses))
         with open(self.file_name,'w') as f:
             f.write(''.join(self.losses[:self.last_epoch_begin_line]))
+
+    def print(self, *args, **kwargs):
+        if self.is_main_process:
+            print(*args, **kwargs)
 
     @staticmethod
     def _parse_loss_name(string: str):

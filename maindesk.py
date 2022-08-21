@@ -2,12 +2,6 @@ import torch
 
 from testtools import *
 
-# args = get_args_parser().parse_args()
-# cfg.merge_from_file('test.yaml')
-# model = DummyModel().cuda()
-# op = optim.SGD(model.parameters(),lr=1)
-# sc = scheduler.MultiStepLR(op,[5,10],gamma=0.1)
-# op.zero_grad()
 #
 #
 # opdict = op.state_dict()
@@ -34,7 +28,17 @@ from testtools import *
 #
 # draw_loss('testing_2.log')
 
-a = torch.ones((8,3, 5,5))
-b = torch.tensor([[[1]],[[2]],[[3]]])
-c = a-b
-print(c[4,2,:,:])
+# a = torch.ones((8,3, 5,5))
+# b = torch.tensor([[[1]],[[2]],[[3]]])
+# c = a-b
+# print(c[4,2,:,:])
+try:
+    a = 1
+    try:
+        assert a ==2
+    except:
+        print('lll')
+        raise
+except:
+    print('outer')
+print('good')
