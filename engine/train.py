@@ -258,7 +258,12 @@ class Train():
             self.print('\t-Loading:', end=' ')
             try:
                 ckpt_file = torch.load(self.args.fine_tune)
-                self.model.load_state_dict(ckpt_file['model'])
+                try:
+                    self.model.load_state_dict(ckpt_file['model'])
+                except:
+                    self.print('FAIL')
+                    self.print('\t-Parallel Model Loading:',end=' ')
+                    self.model.load_state_dict(de_parallel(ckpt_file['model']))
                 self.print('SUCCESS')
                 self.log_info('Using FineTuning Model: %s'%self.args.fine_tune)
             except:

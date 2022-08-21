@@ -9,6 +9,7 @@ from pycocotools.coco import COCO
 from data.dataloader import build_dataloader
 from data.data_augment import Normalizer
 from utils.misc import progressbar
+from utils.paralle import de_parallel
 
 class Eval():
     def __init__(self, config, args, model, device):
@@ -33,7 +34,12 @@ class Eval():
             print('\t-Loading:', end=' ')
             try:
                 ckpt_file = torch.load(self.args.ckpt_file)
-                self.model.load_state_dict(ckpt_file['model'])
+                try:
+                    self.model.load_state_dict(ckpt_file['model'])
+                except:
+                    print('FAIL')
+                    print('\t-Parallel Model Loading:',end=' ')
+                    self.model.load_state_dict(de_parallel(ckpt_file['model']))
                 print('SUCCESS')
             except:
                 print("FAIL")

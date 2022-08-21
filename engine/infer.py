@@ -6,6 +6,7 @@ import cv2
 from copy import deepcopy
 
 from data.data_augment import LetterBox, Normalizer
+from utils.paralle import de_parallel
 
 class Infer():
     def __init__(self, config, args, model, device):
@@ -24,7 +25,12 @@ class Infer():
             print('\t-Loading:', end=' ')
             try:
                 ckpt_file = torch.load(self.args.ckpt_file)
-                self.model.load_state_dict(ckpt_file['model'])
+                try:
+                    self.model.load_state_dict(ckpt_file['model'])
+                except:
+                    print('FAIL')
+                    print('\t-Parallel Model Loading:',end=' ')
+                    self.model.load_state_dict(de_parallel(ckpt_file['model']))
                 print('SUCCESS')
             except:
                 print("FAIL")
