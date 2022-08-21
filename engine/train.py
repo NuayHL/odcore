@@ -17,6 +17,7 @@ from utils.ema import ModelEMA
 from utils.exp_storage import mylogger
 from utils.misc import progressbar, loss_dict_to_str
 from utils.exp import Exp
+from utils.paralle import de_parallel
 from engine.eval import coco_eval
 
 # Set os.environ['CUDA_VISIBLE_DEVICES'] = '-1' and rank = -1 for cpu training
@@ -273,7 +274,13 @@ class Train():
             self.print("\t-Loading:", end=' ')
             try:
                 ckpt_file = torch.load(self.args.ckpt_file)
-                self.model.load_state_dict(ckpt_file['model'])
+                try:
+                    self.model.load_state_dict(ckpt_file['model'])
+                except:
+                    self.print('FAIL')
+                    self.print('\t-Parallel Model Loading:',end=' ')
+                    self.model.load_state_dict(de_parallel(ckpt_file['model']))
+
                 self.start_epoch = ckpt_file['last_epoch'] + 1
                 self.optimizer.load_state_dict(ckpt_file['optimizer'])
                 self.scheduler.load_state_dict(ckpt_file['schedular'])
