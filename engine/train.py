@@ -352,7 +352,9 @@ class Train():
                                              'train')
 
     def val_setting(self):
-        if not self.is_main_process: return
+        if not self.is_main_process:
+            self.using_val = False
+            return
         if self.config.training.val_img_path != '':
             self.using_val = True
             self.val_temp_json = os.path.join(self.exp_log_path, 'temp_predictions.json')
