@@ -81,7 +81,7 @@ class Eval():
             print('Prediction Result saved in %s'%self.val_img_result_json_name)
         else:
             print('Found Prediction json file %s'%self.val_img_result_json_name)
-        coco_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name)
+        coco_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name, eval_type='mr')
         print('Full COCO result saved in %s'%self.val_log_name)
 
 def coco_eval(dt, gt:COCO, log_name, pre_str=None, eval_type='coco'):
@@ -115,40 +115,3 @@ def coco_eval(dt, gt:COCO, log_name, pre_str=None, eval_type='coco'):
         #return 0.0, 0.0
     sys.stdout = ori_std
     return eval.stats[:2]
-
-def model_inference_coconp(loader, model, config):
-    """
-    return a result np.ndarray for COCOeval
-    formate: imgidx x1y1wh score class
-    """
-    model.eval()
-    result_list = []
-    result_np = np.ones((0,7), dtype=np.float32)
-    lenth = len(loader)
-    print('Starting inference.')
-    for idx, batch in enumerate(loader):
-        if torch.cuda.is_available():
-            imgs = batch['imgs'].to(device)
-        else:
-            imgs = batch['imgs']
-        result_list_batch = model(imgs)
-        result_list += result_list_batch
-        progressbar(float((idx+1)/lenth),barlenth=40)
-    print('Sorting...')
-    lenth = len(result_list)
-    for idx, result in enumerate(result_list):
-        if result is not None:
-            img_id = dataset.image_id[idx]
-            ori_img = dataset.annotations.loadImgs(img_id)[0]
-            fx = ori_img['width']/config.input_width
-            fy = ori_img['height']/config.input_height
-            result_formated = result.to_evaluation(img_id)
-            result_formated[:, 1] *= fx
-            result_formated[:, 3] *= fx
-            result_formated[:, 2] *= fy
-            result_formated[:, 4] *= fy
-            result_np = np.concatenate((result_np,result_formated),0)
-        else:
-            pass
-        progressbar(float((idx + 1) / lenth), barlenth=40)
-    return result_np

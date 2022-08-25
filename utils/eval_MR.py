@@ -111,7 +111,7 @@ class COCOeval_MR:
         self.evalImgs = defaultdict(list)   # per-image per-category evaluation results
         self.eval     = {}                  # accumulated evaluation results
 
-    def evaluate(self, id_setup):
+    def evaluate(self, id_setup=1):
         '''
         Run per image evaluation on given images and store results (a list of dict) in self.evalImgs
         :return: None
@@ -423,7 +423,7 @@ class COCOeval_MR:
         # print('DONE (t={:0.2f}s).'.format( toc-tic))
         return draw_fpps, draw_scores
 
-    def summarize(self,id_setup, res_file):
+    def summarize(self,id_setup=0):
         '''
         Compute and display summary metrics for evaluation results.
         Note this functin can *only* be applied on the default parameter setting
@@ -457,8 +457,8 @@ class COCOeval_MR:
                 mean_s = np.exp(mean_s)
             print(iStr.format(titleStr, typeStr,setupStr, iouStr, heightStr, occlStr, mean_s*100))
             # res_file.write(iStr.format(titleStr, typeStr,setupStr, iouStr, heightStr, occlStr, mean_s*100))
-            res_file.write(str(mean_s * 100))
-            res_file.write('\n')
+            # res_file.write(str(mean_s * 100))
+            # res_file.write('\n')
             return mean_s
 
         if not self.eval:
