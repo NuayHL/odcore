@@ -5,6 +5,7 @@ import torch
 import numpy as np
 from time import time
 from pycocotools.cocoeval import COCOeval
+from utils.eval_MR import COCOeval_MR
 from pycocotools.coco import COCO
 from data.dataloader import build_dataloader
 from data.data_augment import Normalizer
@@ -83,8 +84,16 @@ class Eval():
         coco_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name)
         print('Full COCO result saved in %s'%self.val_log_name)
 
-def coco_eval(dt, gt:COCO, log_name, pre_str=None):
+def coco_eval(dt, gt:COCO, log_name, pre_str=None, eval_type='coco'):
     '''return map, map50'''
+
+    if eval_type == 'coco':
+        EVAL_coco = COCOeval
+    elif eval_type == 'mr':
+        EVAL_coco = COCOeval_MR
+    else:
+        raise NotImplementedError('Invalid evaluation type')
+
     start = time()
     # Print the evaluation result to the log
     ori_std = sys.stdout
@@ -93,7 +102,7 @@ def coco_eval(dt, gt:COCO, log_name, pre_str=None):
             sys.stdout = f
             if pre_str: print(pre_str)
             dt = gt.loadRes(dt)
-            eval = COCOeval(gt, dt, 'bbox')
+            eval = EVAL_coco(gt, dt, 'bbox')
             eval.evaluate()
             eval.accumulate()
             eval.summarize()
