@@ -197,6 +197,11 @@ class Train():
         else:
             self.current_step = 0
         self.using_loss_protect = self.args.safety_mode
+        self.print('SAFETY MODE:', end='')
+        if self.using_loss_protect:
+            self.print('[ON]')
+        else:
+            self.print('[OFF]')
 
     def train(self):
         for epoch in range(self.start_epoch, self.final_epoch + 1):
