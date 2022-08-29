@@ -471,6 +471,7 @@ class Train():
         if not self.using_loss_protect or not self.is_main_process: return
         if not hasattr(self, 'last_invalid'):
             self.last_invalid = False
+            self.invalid_loss_acc = 0
         if torch.isinf(loss) or torch.isnan(loss):
             self.keep_last_ckpt('emergency_save')
             if not self.last_invalid:
