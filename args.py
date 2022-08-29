@@ -12,7 +12,7 @@ def get_train_args_parser(add_help=True):
     parser.add_argument('--workers', default=8, type=int, help='number of data loading workers (default: 8)')
     parser.add_argument('--device', default='0', type=str, help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--eval-interval', default=20, type=int, help='evaluate at every interval epochs')
-    parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter')
+    parser.add_argument('--safety-mode', action='store_true', help='if using loss protect measures')
     return parser
 
 def get_infer_args_parser(add_help=True):
