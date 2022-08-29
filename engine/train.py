@@ -192,7 +192,7 @@ class Train():
         self.val_setting()
         self.scaler = amp.GradScaler()
         self.itr_in_epoch = len(self.train_loader)
-        self.current_step = 0
+        self.current_step = (self.start_epoch - 1) * self.itr_in_epoch
 
     def train(self):
         for epoch in range(self.start_epoch, self.final_epoch + 1):
