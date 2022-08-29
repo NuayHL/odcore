@@ -163,6 +163,15 @@ class Train():
 
     def pre_train_setting(self):
         self.log_info('Train Type: %s'%self.train_type)
+
+        self.safety_mode = self.args.safety_mode
+        self.using_loss_protect = self.safety_mode
+        self.print('Safety Mode:', end='')
+        if self.safety_mode:
+            self.print('[ON]')
+        else:
+            self.print('[OFF]')
+
         self.model.set(self.args, self.device)
         self.normalizer = Normalizer(self.config.data,self.device)
 
@@ -196,12 +205,6 @@ class Train():
             self.current_step = (self.start_epoch - 1) * self.itr_in_epoch
         else:
             self.current_step = 0
-        self.using_loss_protect = self.args.safety_mode
-        self.print('SAFETY MODE:', end='')
-        if self.using_loss_protect:
-            self.print('[ON]')
-        else:
-            self.print('[OFF]')
 
     def train(self):
         for epoch in range(self.start_epoch, self.final_epoch + 1):
@@ -330,7 +333,7 @@ class Train():
         old_name = os.path.join(self.exp_log_path, 'last_epoch.pth')
         if not os.path.exists(old_name): return
         new_name = os.path.join(self.exp_log_path, new_file_name+'_E%d.pth'%(self.current_epoch-1))
-        if os.path.exists(new_name): return
+        if os.path.exists(new_name) or new_name == old_name: return
         os.rename(old_name, new_name)
         self.logger.warning('Keep the ckpt of epoch %d to %s'%(self.current_epoch-1,new_name))
 
@@ -486,7 +489,6 @@ class Train():
             self.print('\nInvalid Loss detect multiple times, exit training!')
             self.logger.error('Invalid Loss detect multiple times, exit training!')
             exit()
-
 
     def print(self, *args, **kwargs):
         if self.is_main_process:
