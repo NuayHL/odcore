@@ -363,16 +363,19 @@ class Train():
         if not self.is_main_process:
             self.using_val = False
             return
-        if self.config.training.val_img_path != '':
+        if os.path.exists(self.config.training.val_img_path):
             self.using_val = True
             self.val_temp_json = os.path.join(self.exp_log_path, 'temp_predictions.json')
             self.val_log = os.path.join(self.exp_log_path, self.exp_log_name + '_val.log')
             self.val_type = self.config.training.val_metric
             if self.val_type == 'coco':
                 self.valfun = self.val_coco
+                self.print("Using COCO Metric for eval")
             else:
                 raise NotImplementedError('Invalid Evaluation Metric')
-        else: self.using_val = False
+        else:
+            self.using_val = False
+            self.print("Val path not specify or not exist, No eval")
         self.build_val_dataloader()
 
     def build_val_dataloader(self):
