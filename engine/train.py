@@ -163,6 +163,15 @@ class Train():
 
     def pre_train_setting(self):
         self.log_info('Train Type: %s'%self.train_type)
+
+        self.safety_mode = self.args.safety_mode
+        self.using_loss_protect = self.safety_mode
+        self.print('Safety Mode:', end='')
+        if self.safety_mode:
+            self.print('[ON]')
+        else:
+            self.print('[OFF]')
+
         self.model.set(self.args, self.device)
         self.normalizer = Normalizer(self.config.data,self.device)
 
@@ -211,6 +220,7 @@ class Train():
                 self.normalizer(samples)
                 with amp.autocast(enabled=self.using_autocast):
                     loss, loss_dict = self.model(samples)
+                self.check_loss_or_save(loss)
                 self.scaler.scale(loss).backward()
                 self.current_step += 1
                 loss_log = loss_dict_to_str(loss_dict)
@@ -317,6 +327,15 @@ class Train():
             ckpt['ema'] = self.ema.ema
             ckpt['ema_updates'] = self.ema.updates
             torch.save(ckpt, self.exp_log_path+'/'+file_name+'.pth')
+
+    def keep_last_ckpt(self, new_file_name = 'special_ckpt'):
+        if not self.is_main_process: return
+        old_name = os.path.join(self.exp_log_path, 'last_epoch.pth')
+        if not os.path.exists(old_name): return
+        new_name = os.path.join(self.exp_log_path, new_file_name+'_E%d.pth'%(self.current_epoch-1))
+        if os.path.exists(new_name) or new_name == old_name: return
+        os.rename(old_name, new_name)
+        self.logger.warning('Keep the ckpt of epoch %d to %s'%(self.current_epoch-1,new_name))
 
     def save_model(self, file_name):
         if self.is_main_process:
@@ -453,6 +472,26 @@ class Train():
             raise NotImplementedError
         self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lf)
         self.lf = lf
+
+    def check_loss_or_save(self,loss):
+        if not self.using_loss_protect or not self.is_main_process: return
+        if not hasattr(self, 'last_invalid'):
+            self.last_invalid = False
+            self.invalid_loss_acc = 0
+        if torch.isinf(loss) or torch.isnan(loss):
+            self.keep_last_ckpt('emergency_save')
+            if not self.last_invalid:
+                self.last_invalid = True
+                self.invalid_loss_acc = 1
+            else:
+                self.invalid_loss_acc += 1
+        else:
+            self.last_invalid = False
+
+        if self.invalid_loss_acc == 3:
+            self.print('\nInvalid Loss detect multiple times, exit training!')
+            self.logger.error('Invalid Loss detect multiple times, exit training!')
+            exit()
 
     def print(self, *args, **kwargs):
         if self.is_main_process:
