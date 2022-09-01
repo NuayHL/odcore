@@ -81,7 +81,7 @@ class Eval():
             print('Prediction Result saved in %s'%self.val_img_result_json_name)
         else:
             print('Found Prediction json file %s'%self.val_img_result_json_name)
-        coco_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name, eval_type='mr')
+        coco_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name, eval_type='coco')
         print('Full COCO result saved in %s'%self.val_log_name)
 
 def coco_eval(dt, gt:COCO, log_name, pre_str=None, eval_type='coco'):
