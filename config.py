@@ -79,6 +79,18 @@ def get_default_yaml_templete():
     with open("default_config.yaml", "w") as f:
         f.write(cfg_string)
 
+def merge_from_files(config: CN, file_path):
+    if '.yaml' in file_path:
+        config.merge_from_file(file_path)
+    elif os.path.exists(file_path):
+        cfg_files = os.listdir(file_path)
+        for cfg in cfg_files:
+            if '.yaml' not in cfg: continue
+            config.merge_from_file(os.path.join(file_path, cfg))
+    else:
+        raise FileNotFoundError('Config path not exists')
+    return config
+
 if __name__ == "__main__":
     # cfg = get_default_cfg()
     # cfg.merge_from_file('default_config.yaml')
