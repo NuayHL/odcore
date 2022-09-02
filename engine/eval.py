@@ -81,19 +81,11 @@ class Eval():
             print('Prediction Result saved in %s'%self.val_img_result_json_name)
         else:
             print('Found Prediction json file %s'%self.val_img_result_json_name)
-        coco_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name, eval_type='mr')
+        coco_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name)
         print('Full COCO result saved in %s'%self.val_log_name)
 
-def coco_eval(dt, gt:COCO, log_name, pre_str=None, eval_type='coco'):
+def coco_eval(dt, gt:COCO, log_name, pre_str=None):
     '''return map, map50'''
-
-    if eval_type == 'coco':
-        EVAL_coco = COCOeval
-    elif eval_type == 'mr':
-        EVAL_coco = COCOeval_MR
-    else:
-        raise NotImplementedError('Invalid evaluation type')
-
     start = time()
     # Print the evaluation result to the log
     ori_std = sys.stdout
@@ -102,7 +94,7 @@ def coco_eval(dt, gt:COCO, log_name, pre_str=None, eval_type='coco'):
             sys.stdout = f
             if pre_str: print(pre_str)
             dt = gt.loadRes(dt)
-            eval = EVAL_coco(gt, dt, 'bbox')
+            eval = COCOeval(gt, dt, 'bbox')
             eval.evaluate()
             eval.accumulate()
             eval.summarize()
@@ -115,3 +107,35 @@ def coco_eval(dt, gt:COCO, log_name, pre_str=None, eval_type='coco'):
         #return 0.0, 0.0
     sys.stdout = ori_std
     return eval.stats[:2]
+
+# def coco_eval(dt, gt:COCO, log_name, pre_str=None, eval_type='coco'):
+#     '''return map, map50'''
+#
+#     if eval_type == 'coco':
+#         EVAL_coco = COCOeval
+#     elif eval_type == 'mr':
+#         EVAL_coco = COCOeval_MR
+#     else:
+#         raise NotImplementedError('Invalid evaluation type')
+#
+#     start = time()
+#     # Print the evaluation result to the log
+#     ori_std = sys.stdout
+#     try:
+#         with open(log_name,"a") as f:
+#             sys.stdout = f
+#             if pre_str: print(pre_str)
+#             dt = gt.loadRes(dt)
+#             eval = EVAL_coco(gt, dt, 'bbox')
+#             eval.evaluate()
+#             eval.accumulate()
+#             eval.summarize()
+#             print("eval_times:%.2fs"%(time()-start))
+#             print("\n")
+#     except:
+#         sys.stdout = ori_std
+#         print('Error in evaluation')
+#         raise
+#         #return 0.0, 0.0
+#     sys.stdout = ori_std
+#     return eval.stats[:2]

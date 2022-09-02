@@ -210,6 +210,10 @@ class Train():
         for epoch in range(self.start_epoch, self.final_epoch + 1):
             self.current_epoch = epoch
             self.model.train()
+            if (self.final_epoch - self.current_epoch) == 15:
+                self.print("15 epoches before the end of training, change to no mosaic training.")
+                self.change_to_no_mosaic_training()
+                self.log_info("15 epoches before the end of training, change to no mosaic training")
             if self.rank != -1:
                 self.train_loader.sampler.set_epoch(epoch)
             self.print('Epoch: %d/%d'%(self.current_epoch, self.final_epoch))
@@ -377,6 +381,11 @@ class Train():
                                              self.batchsize, self.rank,
                                              self.config.training.workers,
                                              'train')
+
+    def change_to_no_mosaic_training(self):
+        del self.train_loader
+        self.config.merge_from_file('data/data_no_mosaic.yaml')
+        self.build_train_dataloader()
 
     def val_setting(self):
         if not self.is_main_process:
