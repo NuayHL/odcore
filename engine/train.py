@@ -200,7 +200,7 @@ class Train():
         self.build_train_dataloader()
         self.val_setting()
         self.scaler = amp.GradScaler()
-        self.itr_in_epoch = len(self.train_loader)
+        self.itr_in_epoch = int(len(self.train_loader)/self.accumulate)
         if self.train_type in ['[Checkpoint]', '[Resume]']:
             self.current_step = (self.start_epoch - 1) * self.itr_in_epoch
         else:
