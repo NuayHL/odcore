@@ -224,15 +224,13 @@ class Train():
                 self.normalizer(samples)
                 with amp.autocast(enabled=self.using_autocast):
                     loss, loss_dict = self.model(samples)
+                loss_log = loss_dict_to_str(loss_dict)
                 self.check_loss_or_save(loss)
                 self.scaler.scale(loss).backward()
-                loss_log = loss_dict_to_str(loss_dict)
                 if self.is_main_process:
-                    progressbar((i+1)/float(self.itr_in_epoch), barlenth=40, endstr=loss_log)
-                    self.logger_loss.info('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
-                                  ' '+loss_log)
+                    progressbar((i + 1) / float(self.itr_in_epoch), barlenth=40, endstr=loss_log)
                 self.warm_up_setting()
-                self.step_and_update()
+                self.step_and_update(loss_log)
             time_epoch_end = time.time()
             self.scheduler.step()
             if self.is_main_process:
@@ -249,8 +247,11 @@ class Train():
                         self.print("Error during eval..")
                         self.log_warn("Error during eval :(")
 
-    def step_and_update(self):
+    def step_and_update(self, loss_log):
         if self.accumulate == 1 or self.current_step % self.accumulate == 0:
+            if self.is_main_process:
+                self.logger_loss.info('epoch ' + str(self.current_epoch) + '/' + str(self.final_epoch) +
+                                      ' ' + loss_log)
             self.scaler.step(self.optimizer)
             self.scaler.update()
             if self.ema:
