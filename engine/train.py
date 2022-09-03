@@ -226,7 +226,6 @@ class Train():
                     loss, loss_dict = self.model(samples)
                 self.check_loss_or_save(loss)
                 self.scaler.scale(loss).backward()
-                self.current_step += 1
                 loss_log = loss_dict_to_str(loss_dict)
                 if self.is_main_process:
                     progressbar((i+1)/float(self.itr_in_epoch), barlenth=40, endstr=loss_log)
@@ -256,6 +255,7 @@ class Train():
             self.scaler.update()
             if self.ema:
                 self.ema.update(self.model)
+            self.current_step += 1
 
     def warm_up_setting(self):
         if self.current_step <= self.warm_up_steps:
@@ -391,7 +391,7 @@ class Train():
         if not self.is_main_process:
             self.using_val = False
             return
-        if os.path.exists(self.config.training.val_img_path):
+        if isinstance(self.config.training.val_img_path, str) and os.path.exists(self.config.training.val_img_path):
             self.using_val = True
             self.val_temp_json = os.path.join(self.exp_log_path, 'temp_predictions.json')
             self.val_log = os.path.join(self.exp_log_path, self.exp_log_name + '_val.log')
