@@ -18,14 +18,22 @@ class BuildOptimizer():
             if self.config_opt.mode == 'groups':
                 for part in self.default_para_groups:
                     if hasattr(model, part):
-                        para_groups.append(model.__getattribute__(part).parameters())
+                        para_groups[part] = model.__getattribute__(part).parameters()
                 for part in self.config_opt.para_group:
-                    if hasattr(model, part):
+                    if hasattr(model, part) and part not in self.default_para_groups:
                         para_groups[part] = model.__getattribute__(part).parameters()
 
-
             elif self.config_opt.mode == 'types':
+                for part in self.config_opt.para_group:
+                    para_groups[part] = []
+                para_groups['else'] = []
                 for layer in model.modules():
+                    for part in self.config_opt.para_group:
+
+                        para_groups[part].append()
+
+                if para_groups['else'] == []:
+                    del para_groups['else']
 
 
 
@@ -42,4 +50,17 @@ class BuildOptimizer():
 
         pass
 
+    @staticmethod
+    def parse_type_group(layers, type):
+        if isinstance(type, str):
+
+        elif isinstance(type, tuple):
+            if name in nn.BatchNorm2d.__name__:
+                return nn.BatchNorm2d
+            elif name in nn.Conv2d.__name__:
+                return nn.Conv2d
+            elif name in nn.Linear.__name__:
+                return nn.Linear
+            else:
+                return NotImplementedError
 
