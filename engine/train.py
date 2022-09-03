@@ -202,7 +202,7 @@ class Train():
         self.scaler = amp.GradScaler()
         self.itr_in_epoch = len(self.train_loader)
         if self.train_type in ['[Checkpoint]', '[Resume]']:
-            self.current_step = (self.start_epoch - 1) * int(self.itr_in_epoch/self.accumulate)
+            self.current_step = (self.start_epoch - 1) * int(self.itr_in_epoch)
         else:
             self.current_step = 0
 
@@ -231,6 +231,7 @@ class Train():
                     progressbar((i + 1) / float(self.itr_in_epoch), barlenth=40, endstr=loss_log)
                 self.warm_up_setting()
                 self.step_and_update(loss_log)
+                self.current_step += 1
             time_epoch_end = time.time()
             self.scheduler.step()
             if self.is_main_process:
@@ -256,10 +257,9 @@ class Train():
             self.scaler.update()
             if self.ema:
                 self.ema.update(self.model)
-            self.current_step += 1
 
     def warm_up_setting(self):
-        if self.current_step <= self.warm_up_steps:
+        if self.current_step <= self.warm_up_steps * self.accumulate:
             self.accumulate = max(1, np.interp(self.current_step, [0, self.warm_up_steps], [1, self.accumulate]).round())
             for k, param in enumerate(self.optimizer.param_groups):
                 warmup_bias_lr = self.config.training.optimizer.warm_up_init_lr
