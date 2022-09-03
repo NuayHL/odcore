@@ -262,7 +262,7 @@ class Train():
         if self.current_step <= self.warm_up_steps:
             self.accumulate = max(1, np.interp(self.current_step, [0, self.warm_up_steps], [1, self.accumulate]).round())
             for k, param in enumerate(self.optimizer.param_groups):
-                warmup_bias_lr = self.config.training.optimizer.warm_up_init_lr if k == 2 else 0.0
+                warmup_bias_lr = self.config.training.optimizer.warm_up_init_lr
                 param['lr'] = np.interp(self.current_step, [0, self.warm_up_steps],
                                         [warmup_bias_lr, param['initial_lr'] * self.lf(self.current_epoch-1)])
                 if 'momentum' in param:
@@ -446,7 +446,7 @@ class Train():
         time_end = time.time()
         self.print('mAP: %.2f, mAP50: %.2f'%(self.map_, self.map50_))
         self.log_info('Evaluation Complete at %.2f s, mAP: %.2f, mAP50: %.2f'
-                      %(time_end-time_start, self.map, self.map50))
+                      %(time_end-time_start, self.map_, self.map50_))
         if self.map50_ > self.map50:
             self.save_model('best_epoch')
             self.map, self.map50 = self.map_, self.map50_
