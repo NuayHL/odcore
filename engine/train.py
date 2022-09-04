@@ -210,10 +210,10 @@ class Train():
         for epoch in range(self.start_epoch, self.final_epoch + 1):
             self.current_epoch = epoch
             self.model.train()
-            if (self.final_epoch - self.current_epoch) == 15:
-                self.print("15 epoches before the end of training, change to no mosaic training.")
+            if (self.final_epoch - self.current_epoch) == self.config.training.last_no_mosaic:
+                self.print("%d epoches before the end of training, change to no mosaic training."%self.config.training.last_no_mosaic)
                 self.change_to_no_mosaic_training()
-                self.log_info("15 epoches before the end of training, change to no mosaic training")
+                self.log_info("%d epoches before the end of training, change to no mosaic training"%self.config.training.last_no_mosaic)
             if self.rank != -1:
                 self.train_loader.sampler.set_epoch(epoch)
             self.print('Epoch: %d/%d'%(self.current_epoch, self.final_epoch))
@@ -476,8 +476,18 @@ class Train():
     def build_scheduler(self):
         if not hasattr(self, 'optimizer'):
             self.build_optimizer()
-        if self.config.training.schedular.type == 'cosine':
-            lf = lambda x: ((1 - math.cos(x * math.pi / self.final_epoch)) / 2) * (self.config.training.schedular.lrf - 1) + 1
+        lr_type = self.config.training.schedular.type
+        if lr_type == 'cosine':
+            lrf = self.config.training.schedular.extra[0]['lrf']
+            lf = lambda x: ((1 - math.cos(x * math.pi / self.final_epoch)) / 2) * (lrf - 1) + 1
+        elif lr_type == 'step':
+            list = self.config.training.schedular.extra[0]['milestones']
+            ratio = self.config.training.schedular.extra[0]['ratio']
+            def step_lr(x):
+                for idx in range(len(list)):
+                    if x < list[idx]: return ratio ** idx
+                return ratio ** len(list)
+            lf = step_lr
         else:
             raise NotImplementedError
         self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lf)
