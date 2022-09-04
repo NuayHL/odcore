@@ -64,7 +64,9 @@ c.training.optimizer = CN()
 c.training.optimizer.type = 'SGD'
 c.training.optimizer.lr = 0.01
 c.training.optimizer.mode = 'none' # none, groups, types
-c.training.optimizer.para_group = None
+c.training.optimizer.para_group = [{'backbone':{'lr':1.0},
+                                    'neck':{'lr':1.0},
+                                    'head':{'lr':1.0}}]
 c.training.optimizer.weight_decay = 0.0005
 c.training.optimizer.momentum = 0.937       #SGD
 c.training.optimizer.warm_up_init_lr = 0.00001
@@ -73,7 +75,6 @@ c.training.optimizer.warm_up_init_momentum = 0.8
 c.training.schedular = CN()
 c.training.schedular.type = 'cosine'   # cosine step
 c.training.schedular.extra = None
-
 # cosine: lrf
 # step: milestones, ratio
 
