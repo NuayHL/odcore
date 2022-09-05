@@ -18,6 +18,7 @@ from utils.exp_storage import mylogger
 from utils.misc import progressbar, loss_dict_to_str
 from utils.exp import Exp
 from utils.paralle import de_parallel
+from utils.optimizer import BuildOptimizer
 from engine.eval import coco_eval
 
 # Set os.environ['CUDA_VISIBLE_DEVICES'] = '-1' and rank = -1 for cpu training
@@ -452,6 +453,10 @@ class Train():
             self.map, self.map50 = self.map_, self.map50_
 
     def build_optimizer(self):
+        opt_builder = BuildOptimizer(self.config)
+        self.optimizer = opt_builder.build(self.model)
+
+    def build_optimizer_default(self):
         config_opt = self.config.training.optimizer
 
         g_bnw, g_w, g_b = [], [], []
