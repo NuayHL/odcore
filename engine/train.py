@@ -385,7 +385,7 @@ class Train():
 
     def change_to_no_mosaic_training(self):
         del self.train_loader
-        self.config.merge_from_file('data/data_no_mosaic.yaml')
+        self.config.merge_from_file('odcore/data/data_no_mosaic.yaml')
         self.build_train_dataloader()
 
     def val_setting(self):
