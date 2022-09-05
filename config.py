@@ -95,6 +95,7 @@ def merge_from_files(config: CN, file_path):
             if '.yaml' not in cfg: continue
             config.merge_from_file(os.path.join(file_path, cfg))
     else:
+        print(file_path)
         raise FileNotFoundError('Config path not exists')
     return config
 
