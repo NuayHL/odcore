@@ -17,10 +17,10 @@ class BuildOptimizer():
             if self.config_opt.mode == 'groups':
                 for part in self.default_para_groups:
                     if hasattr(model, part):
-                        self.para_groups[part] = model.__getattribute__(part).parameters()
+                        self.para_groups[part] = model.__getattr__(part).parameters()
                 for part in self.defined_groups:
                     if hasattr(model, part) and part not in self.default_para_groups:
-                        self.para_groups[part] = model.__getattribute__(part).parameters()
+                        self.para_groups[part] = model.__getattr__(part).parameters()
 
             elif self.config_opt.mode == 'types':
                 for part in self.default_para_types:

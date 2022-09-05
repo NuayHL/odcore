@@ -453,8 +453,11 @@ class Train():
             self.map, self.map50 = self.map_, self.map50_
 
     def build_optimizer(self):
-        opt_builder = BuildOptimizer(self.config)
-        self.optimizer = opt_builder.build(self.model)
+        if self.config.training.optimizer.mode == 'default':
+            self.build_optimizer_default()
+        else:
+            opt_builder = BuildOptimizer(self.config)
+            self.optimizer = opt_builder.build(self.model)
 
     def build_optimizer_default(self):
         config_opt = self.config.training.optimizer
