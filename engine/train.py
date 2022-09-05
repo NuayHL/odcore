@@ -210,7 +210,7 @@ class Train():
         for epoch in range(self.start_epoch, self.final_epoch + 1):
             self.current_epoch = epoch
             self.model.train()
-            if (self.final_epoch - self.current_epoch) == self.config.training.last_no_mosaic:
+            if (self.final_epoch + 1 - self.current_epoch) == self.config.training.last_no_mosaic:
                 self.print("%d epoches before the end of training, change to no mosaic training."%self.config.training.last_no_mosaic)
                 self.change_to_no_mosaic_training()
                 self.log_info("%d epoches before the end of training, change to no mosaic training"%self.config.training.last_no_mosaic)
