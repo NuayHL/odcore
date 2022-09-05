@@ -37,22 +37,38 @@ class BuildOptimizer():
 
         para_keys = self.para_groups.keys()
         for index,part in enumerate(para_keys):
-            if index == 0:
-                if self.config_opt.type.lower() == 'sgd':
-                    if part in self.defined_groups:
-                        part_lr = self.config_opt.lr
-                    self.optimizer = optim.SGD(self.para_groups[part],
-                                               lr = self.config_opt.lr,
-                                               momentum=self.config_opt.momentum, nesterov=True)
-                elif self.config_opt.type.lower() == 'adam':
-                    self.optimizer = optim.Adam(self.para_groups[part],
-                                                lr = self.config_opt.lr,
-                                                betas=(self.config_opt.momentum, 0.999))
-                else:
-                    raise NotImplementedError
-            else:
+            if self.config_opt.type.lower() == 'sgd':
+                part_lr = self.config_opt.lr
+                part_momentum = self.config_opt.momentum
                 if part in self.defined_groups:
-                    self.optimizer.add_param_group({'params':self.para_groups[part],'lr':None})
+                    part_lr *= self.config_opt.para_group[0][part]['lr']
+                    part_momentum *= self.config_opt.para_group[0][part]['momentum']
+
+                if index == 0:
+                    self.optimizer = optim.SGD(self.para_groups[part],
+                                               lr = part_lr,
+                                               momentum=part_momentum, nesterov=True)
+                else:
+                    self.optimizer.add_param_group({'params': self.para_groups[part], 'lr': part_lr,
+                                                    'momentum': part_momentum})
+
+            elif self.config_opt.type.lower() == 'adam':
+                part_lr = self.config_opt.lr
+                part_momentum = self.config_opt.momentum
+                if part in self.defined_groups:
+                    part_lr *= self.config_opt.para_group[0][part]['lr']
+                    part_momentum *= self.config_opt.para_group[0][part]['momentum']
+                if index == 0:
+                    self.optimizer = optim.Adam(self.para_groups[part],
+                                                lr = part_lr,
+                                                betas=(part_momentum, 0.999))
+                else:
+                    self.optimizer.add_param_group({'params': self.para_groups[part],
+                                                    'lr': part_lr,
+                                                    'betas':(part_momentum, 0.999)})
+
+            else:
+                raise NotImplementedError
 
         return self.optimizer
 
