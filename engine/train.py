@@ -167,7 +167,7 @@ class Train():
 
         self.safety_mode = self.args.safety_mode
         self.using_loss_protect = self.safety_mode
-        self.print('Safety Mode:', end='')
+        self.print('Safety Mode: ', end='')
         if self.safety_mode:
             self.print('[ON]')
         else:
