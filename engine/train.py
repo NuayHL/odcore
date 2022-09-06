@@ -19,6 +19,7 @@ from utils.misc import progressbar, loss_dict_to_str
 from utils.exp import Exp
 from utils.paralle import de_parallel
 from utils.optimizer import BuildOptimizer
+from utils.lr_schedular import LFScheduler
 from engine.eval import coco_eval
 
 # Set os.environ['CUDA_VISIBLE_DEVICES'] = '-1' and rank = -1 for cpu training
@@ -484,20 +485,8 @@ class Train():
     def build_scheduler(self):
         if not hasattr(self, 'optimizer'):
             self.build_optimizer()
-        lr_type = self.config.training.schedular.type
-        if lr_type == 'cosine':
-            lrf = self.config.training.schedular.extra[0]['lrf']
-            lf = lambda x: ((1 - math.cos(x * math.pi / self.final_epoch)) / 2) * (lrf - 1) + 1
-        elif lr_type == 'step':
-            list = self.config.training.schedular.extra[0]['milestones']
-            ratio = self.config.training.schedular.extra[0]['ratio']
-            def step_lr(x):
-                for idx in range(len(list)):
-                    if x < list[idx]: return ratio ** idx
-                return ratio ** len(list)
-            lf = step_lr
-        else:
-            raise NotImplementedError
+        lrf_builder = LFScheduler(self.config.training.schedular)
+        lf = lrf_builder.get_lr_fun()
         self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lf)
         self.lf = lf
 
