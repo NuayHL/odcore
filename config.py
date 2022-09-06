@@ -1,6 +1,7 @@
 import yaml
 import os
 from yacs.config import CfgNode as _CN
+from copy import deepcopy
 
 class CN(_CN):
     def dump_to_file_yaml(self, yaml_name=None, path=''):
@@ -22,6 +23,16 @@ class CN(_CN):
         with open(os.path.join(path,file_name + '.yaml'), "w") as f:
             print(self, file=f)
 
+    def dump_to_split_file(self, yaml_name=None, path='', split_keys=['training','data']):
+        if yaml_name is None:
+            assert hasattr(self, 'exp_name')
+            file_name = self.exp_name
+        else:
+            file_name = yaml_name
+        for key in split_keys:
+            self.dump_key(key, file_name, path)
+        self.dump_except_key(split_keys, file_name, path)
+
     def merge_from_files(self, file_path):
         if '.yaml' in file_path:
             self.merge_from_file(file_path)
@@ -33,6 +44,20 @@ class CN(_CN):
         else:
             print(file_path)
             raise FileNotFoundError('Config path not exists')
+
+    def dump_key(self, key, file_name, path=''):
+        if not hasattr(self, key):
+            raise AttributeError
+        dummy_cn = CN()
+        dummy_cn.__setattr__(key,deepcopy(self.__getattr__(key)))
+        dummy_cn.dump_to_file(file_name + '_'+key, path)
+
+    def dump_except_key(self, keys, file_name, path=''):
+        dummy_cn = CN()
+        for key in self.keys():
+            if key not in keys:
+                dummy_cn.__setattr__(key, deepcopy(self.__getattr__(key)))
+        dummy_cn.dump_to_file(file_name + '_else', path)
 
 c = CN()
 c.exp_name = 'yolov3'
@@ -101,7 +126,6 @@ def get_default_yaml_templete():
         f.write(cfg_string)
 
 if __name__ == "__main__":
-    # cfg = get_default_cfg()
-    # cfg.merge_from_file('default_config.yaml')
-    # print(cfg)
-    get_default_yaml_templete()
+    cfg = get_default_cfg()
+    cfg.dump_to_split_file(yaml_name='test',path='')
+    # get_default_yaml_templete()
