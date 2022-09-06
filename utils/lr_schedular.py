@@ -4,7 +4,7 @@ class LFScheduler():
     def __init__(self, config):
         self.no_mosaic_epoch = config.training.last_no_mosaic
         self.final_epoch = config.training.final_epoch
-        self.config_lr = config.training.scheduler
+        self.config_lr = config.training.schedular
         self.lr_type = self.config_lr.type
         self.lr_dict = self.config_lr.extra[0]
 
