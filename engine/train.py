@@ -485,7 +485,7 @@ class Train():
     def build_scheduler(self):
         if not hasattr(self, 'optimizer'):
             self.build_optimizer()
-        lrf_builder = LFScheduler(self.config.training.schedular)
+        lrf_builder = LFScheduler(self.config)
         lf = lrf_builder.get_lr_fun()
         self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lf)
         self.lf = lf
