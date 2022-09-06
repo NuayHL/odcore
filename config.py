@@ -24,14 +24,21 @@ class CN(_CN):
             print(self, file=f)
 
     def dump_to_split_file(self, yaml_name=None, path='', split_keys=['training','data']):
+        index = 1
+        fin_path = deepcopy(path)
+        if os.path.exists(path):
+            fin_path = path + '_%d'%index
+            index += 1
+        if not os.path.exists(fin_path):
+            os.makedirs(fin_path)
         if yaml_name is None:
             assert hasattr(self, 'exp_name')
             file_name = self.exp_name
         else:
             file_name = yaml_name
         for key in split_keys:
-            self.dump_key(key, file_name, path)
-        self.dump_except_key(split_keys, file_name, path)
+            self.dump_key(key, file_name, fin_path)
+        self.dump_except_key(split_keys, file_name, fin_path)
 
     def merge_from_files(self, file_path):
         if '.yaml' in file_path:
