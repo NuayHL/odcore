@@ -251,7 +251,9 @@ class Train():
                         self.log_warn("Error during eval :(")
 
     def step_and_update(self, loss_log):
-        if self.accumulate == 1 or self.current_step % self.accumulate == 0:
+        if not hasattr(self, 'last_step'):
+            self.last_step = self.current_step
+        if self.accumulate == 1 or self.current_step - self.last_step == self.accumulate:
             if self.is_main_process:
                 self.logger_loss.info('epoch ' + str(self.current_epoch) + '/' + str(self.final_epoch) +
                                       ' ' + loss_log)
@@ -260,6 +262,7 @@ class Train():
             self.optimizer.zero_grad()
             if self.ema:
                 self.ema.update(self.model)
+            self.last_step = self.current_step
 
     def warm_up_setting(self):
         if self.current_step <= self.warm_up_steps * self.accumulate:
