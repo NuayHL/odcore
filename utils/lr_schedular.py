@@ -22,8 +22,8 @@ class LFScheduler():
                     return lrf
             self.lf = detail_cosine
         elif self.lr_type == 'step':
-            list = self.config_lr['milestones']
-            ratio = self.config_lr['ratio']
+            list = self.lr_dict['milestones']
+            ratio = self.lr_dict['ratio']
             def step_lr(x):
                 for idx in range(len(list)):
                     if x < list[idx]: return ratio ** idx
