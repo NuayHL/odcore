@@ -220,8 +220,8 @@ class Train():
                 self.train_loader.sampler.set_epoch(epoch)
             self.print('Epoch: %d/%d'%(self.current_epoch, self.final_epoch))
             time_epoch_start = time.time()
+            self.optimizer.zero_grad()
             for i, samples in enumerate(self.train_loader):
-                self.optimizer.zero_grad()
                 samples['imgs'] = samples['imgs'].to(self.device).float() / 255
                 self.normalizer(samples)
                 with amp.autocast(enabled=self.using_autocast):
@@ -257,6 +257,7 @@ class Train():
                                       ' ' + loss_log)
             self.scaler.step(self.optimizer)
             self.scaler.update()
+            self.optimizer.zero_grad()
             if self.ema:
                 self.ema.update(self.model)
 
