@@ -57,6 +57,24 @@ class GeneralAugmenter():
             im_hsv = cv2.merge((cv2.LUT(hue, lut_hue), cv2.LUT(sat, lut_sat), cv2.LUT(val, lut_val)))
             cv2.cvtColor(im_hsv, cv2.COLOR_HSV2BGR, sample["img"])
 
+class Resizer():
+    def __init__(self, config_data):
+        self.width = config_data.input_width
+        self.height = config_data.input_height
+    def __call__(self, sample):
+        fy = self.height / float(sample['shape'][1])
+        fx = self.width / float(sample['shape'][0])
+        f = min(fx, fy)
+        sample["anns"][:, 0:4] *= f
+        if f != 1:
+            sample['img'] = cv2.resize(
+                sample['img'],
+                (int(float(sample['shape'][0]) * f), int(float(sample['shape'][1]) * f)),
+                interpolation=cv2.INTER_AREA
+                if f < 1 else cv2.INTER_LINEAR)
+
+# The following codes are modified from
+# https://github.com/ultralytics/yolov5/blob/master/utils/dataloaders.py
 class LetterBox():
     def __init__(self, config_data, color=(114,114,114),auto=False, scaleup=True, stride=32):
         self.width = config_data.input_width
@@ -94,21 +112,6 @@ class LetterBox():
         sample["anns"][:, 0] += dw
         sample["anns"][:, 1] += dh
 
-class Resizer():
-    def __init__(self, config_data):
-        self.width = config_data.input_width
-        self.height = config_data.input_height
-    def __call__(self, sample):
-        fy = self.height / float(sample['shape'][1])
-        fx = self.width / float(sample['shape'][0])
-        f = min(fx, fy)
-        sample["anns"][:, 0:4] *= f
-        if f != 1:
-            sample['img'] = cv2.resize(
-                sample['img'],
-                (int(float(sample['shape'][0]) * f), int(float(sample['shape'][1]) * f)),
-                interpolation=cv2.INTER_AREA
-                if f < 1 else cv2.INTER_LINEAR)
 
 class RandomAffine():
     def __init__(self, config_data):
