@@ -1,8 +1,16 @@
 ## Core Engine for object detection task
 
+#### config.py
+
+
+#### engine/train.py
+#### engine/infer.py
+#### engine/eval.py
+
+
 #### Experiment File Storage
 
-Experiment name: config.exp_name
+- Experiment name: config.exp_name
 ```
 expname_cfg.yaml
 expname_args.yaml
@@ -11,9 +19,9 @@ expname_loss.log
 best_epoch.pth or last_epoch.pth
 ```
 
-Resume Rule:
-- modified formal loss.log if its last epoch record is incomplete
-- read the last_epoch.pth as checkpoint
+- Resume Rule:
+ 1. modified formal loss.log if its last epoch record is incomplete
+ 2. read the last_epoch.pth as checkpoint
 #### About Model
 The input Model must have two member function:
 ```

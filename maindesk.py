@@ -11,9 +11,11 @@ from testtools import *
 # print(scdict.keys())
 # print(scdict)
 #
-# dataset = CocoDataset('CrowdHuman/annotation_train_coco_style_100.json','CrowdHuman/Images_train', config_data=cfg.data,
-#                       task='train')
-# dataset_inspection(dataset, 78, anntype='xywh')
+cfg.merge_from_file('default_config.yaml')
+dataset = CocoDataset('CrowdHuman/annotation_val_coco_style.json','CrowdHuman/Images_val', config_data=cfg.data,
+                       task='train')
+dataset_inspection(dataset, 345, anntype='xywh')
+print(dataset[345]['id'])
 # dataset_inspection(dataset, 78, anntype='xywh')
 # dataset_inspection(dataset, 78, anntype='xywh')
 
