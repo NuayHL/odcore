@@ -1,8 +1,10 @@
 ## Core Engine for object detection task
 
+### Structure
+#### args.py
+check `args.py` for detailed arg usage
+
 #### config.py
-
-
 #### engine/train.py
 #### engine/infer.py
 #### engine/eval.py
@@ -22,7 +24,7 @@ best_epoch.pth or last_epoch.pth
 - Resume Rule:
  1. modified formal loss.log if its last epoch record is incomplete
  2. read the last_epoch.pth as checkpoint
-#### About Model
+### About Input Model
 The input Model must have two member function:
 ```
 Model.set(args, device)
