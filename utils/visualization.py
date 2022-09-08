@@ -207,8 +207,8 @@ class LossLog():
                 if current_epoch != last_epoch:
                     if self.itr_in_epoch == None:
                         self.itr_in_epoch = step_in_epoch - 1
-                    else:
-                        assert self.itr_in_epoch == step_in_epoch - 1, 'Invalid Log File'
+                    # else:
+                    #     assert self.itr_in_epoch == step_in_epoch - 1, 'Invalid Log File'
                     self.last_epoch_begin_line = idx
                     self.loss_sum_epoch_list.append(0)
                     for name in self.loss_epoch_list:

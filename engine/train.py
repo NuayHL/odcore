@@ -18,6 +18,8 @@ from utils.exp_storage import mylogger
 from utils.misc import progressbar, loss_dict_to_str
 from utils.exp import Exp
 from utils.paralle import de_parallel
+from utils.optimizer import BuildOptimizer
+from utils.lr_schedular import LFScheduler
 from engine.eval import coco_eval
 
 # Set os.environ['CUDA_VISIBLE_DEVICES'] = '-1' and rank = -1 for cpu training
@@ -166,7 +168,7 @@ class Train():
 
         self.safety_mode = self.args.safety_mode
         self.using_loss_protect = self.safety_mode
-        self.print('Safety Mode:', end='')
+        self.print('Safety Mode: ', end='')
         if self.safety_mode:
             self.print('[ON]')
         else:
@@ -202,7 +204,7 @@ class Train():
         self.scaler = amp.GradScaler()
         self.itr_in_epoch = len(self.train_loader)
         if self.train_type in ['[Checkpoint]', '[Resume]']:
-            self.current_step = (self.start_epoch - 1) * self.itr_in_epoch
+            self.current_step = (self.start_epoch - 1) * int(self.itr_in_epoch)
         else:
             self.current_step = 0
 
@@ -210,30 +212,28 @@ class Train():
         for epoch in range(self.start_epoch, self.final_epoch + 1):
             self.current_epoch = epoch
             self.model.train()
-            if (self.final_epoch - self.current_epoch) == 15:
-                self.print("15 epoches before the end of training, change to no mosaic training.")
+            if (self.final_epoch + 1 - self.current_epoch) == self.config.training.last_no_mosaic:
+                self.print("%d epoches before the end of training, change to no mosaic training."%self.config.training.last_no_mosaic)
                 self.change_to_no_mosaic_training()
-                self.log_info("15 epoches before the end of training, change to no mosaic training")
+                self.log_info("%d epoches before the end of training, change to no mosaic training"%self.config.training.last_no_mosaic)
             if self.rank != -1:
                 self.train_loader.sampler.set_epoch(epoch)
             self.print('Epoch: %d/%d'%(self.current_epoch, self.final_epoch))
             time_epoch_start = time.time()
+            self.optimizer.zero_grad()
             for i, samples in enumerate(self.train_loader):
-                self.optimizer.zero_grad()
                 samples['imgs'] = samples['imgs'].to(self.device).float() / 255
                 self.normalizer(samples)
                 with amp.autocast(enabled=self.using_autocast):
                     loss, loss_dict = self.model(samples)
+                loss_log = loss_dict_to_str(loss_dict)
                 self.check_loss_or_save(loss)
                 self.scaler.scale(loss).backward()
-                self.current_step += 1
-                loss_log = loss_dict_to_str(loss_dict)
                 if self.is_main_process:
-                    progressbar((i+1)/float(self.itr_in_epoch), barlenth=40, endstr=loss_log)
-                    self.logger_loss.info('epoch '+str(self.current_epoch)+'/'+str(self.final_epoch)+
-                                  ' '+loss_log)
+                    progressbar((i + 1) / float(self.itr_in_epoch), barlenth=40, endstr=loss_log)
                 self.warm_up_setting()
-                self.step_and_update()
+                self.step_and_update(loss_log)
+                self.current_step += 1
             time_epoch_end = time.time()
             self.scheduler.step()
             if self.is_main_process:
@@ -250,18 +250,25 @@ class Train():
                         self.print("Error during eval..")
                         self.log_warn("Error during eval :(")
 
-    def step_and_update(self):
-        if self.accumulate == 1 or self.current_step % self.accumulate == 0:
+    def step_and_update(self, loss_log):
+        if not hasattr(self, 'last_step'):
+            self.last_step = self.current_step
+        if self.accumulate == 1 or self.current_step - self.last_step == self.accumulate:
+            if self.is_main_process:
+                self.logger_loss.info('epoch ' + str(self.current_epoch) + '/' + str(self.final_epoch) +
+                                      ' ' + loss_log)
             self.scaler.step(self.optimizer)
             self.scaler.update()
+            self.optimizer.zero_grad()
             if self.ema:
                 self.ema.update(self.model)
+            self.last_step = self.current_step
 
     def warm_up_setting(self):
-        if self.current_step <= self.warm_up_steps:
+        if self.current_step <= self.warm_up_steps * self.accumulate:
             self.accumulate = max(1, np.interp(self.current_step, [0, self.warm_up_steps], [1, self.accumulate]).round())
             for k, param in enumerate(self.optimizer.param_groups):
-                warmup_bias_lr = self.config.training.optimizer.warm_up_init_lr if k == 2 else 0.0
+                warmup_bias_lr = self.config.training.optimizer.warm_up_init_lr
                 param['lr'] = np.interp(self.current_step, [0, self.warm_up_steps],
                                         [warmup_bias_lr, param['initial_lr'] * self.lf(self.current_epoch-1)])
                 if 'momentum' in param:
@@ -384,14 +391,14 @@ class Train():
 
     def change_to_no_mosaic_training(self):
         del self.train_loader
-        self.config.merge_from_file('data/data_no_mosaic.yaml')
+        self.config.merge_from_file('odcore/data/data_no_mosaic.yaml')
         self.build_train_dataloader()
 
     def val_setting(self):
         if not self.is_main_process:
             self.using_val = False
             return
-        if os.path.exists(self.config.training.val_img_path):
+        if isinstance(self.config.training.val_img_path, str) and os.path.exists(self.config.training.val_img_path):
             self.using_val = True
             self.val_temp_json = os.path.join(self.exp_log_path, 'temp_predictions.json')
             self.val_log = os.path.join(self.exp_log_path, self.exp_log_name + '_val.log')
@@ -445,12 +452,19 @@ class Train():
         time_end = time.time()
         self.print('mAP: %.2f, mAP50: %.2f'%(self.map_, self.map50_))
         self.log_info('Evaluation Complete at %.2f s, mAP: %.2f, mAP50: %.2f'
-                      %(time_end-time_start, self.map, self.map50))
+                      %(time_end-time_start, self.map_, self.map50_))
         if self.map50_ > self.map50:
             self.save_model('best_epoch')
             self.map, self.map50 = self.map_, self.map50_
 
     def build_optimizer(self):
+        if self.config.training.optimizer.mode == 'default':
+            self.build_optimizer_default()
+        else:
+            opt_builder = BuildOptimizer(self.config)
+            self.optimizer = opt_builder.build(self.model)
+
+    def build_optimizer_default(self):
         config_opt = self.config.training.optimizer
 
         g_bnw, g_w, g_b = [], [], []
@@ -475,10 +489,8 @@ class Train():
     def build_scheduler(self):
         if not hasattr(self, 'optimizer'):
             self.build_optimizer()
-        if self.config.training.schedular.type == 'cosine':
-            lf = lambda x: ((1 - math.cos(x * math.pi / self.final_epoch)) / 2) * (self.config.training.schedular.lrf - 1) + 1
-        else:
-            raise NotImplementedError
+        lrf_builder = LFScheduler(self.config)
+        lf = lrf_builder.get_lr_fun()
         self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lf)
         self.lf = lf
 
