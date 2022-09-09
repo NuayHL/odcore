@@ -73,6 +73,22 @@ class Exp():
     def get_exp_files(self):
         return self.files
 
+    def rename(self, new_name):
+        exp_place = os.path.dirname(self.exp_path)
+        other_exp = os.listdir(exp_place)
+        assert new_name not in other_exp, 'New exp name repeat!'
+        for file in self.files:
+            if self.exp_name in file:
+                ori_full_file_name = os.path.join(self.exp_path,file)
+                new_full_file_name = os.path.join(self.exp_path,file.replace(self.exp_name, new_name))
+                os.rename(ori_full_file_name, new_full_file_name)
+        self.exp_name = new_name
+        old_path = self.exp_path
+        self.exp_path = os.path.join(exp_place, new_name)
+        os.rename(old_path, self.exp_path)
+        self.print("Checking renamed exp...")
+        self.check_exp()
+
     def print(self, *args, **kwargs):
         if self.is_main_process:
             print(*args, **kwargs)

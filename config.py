@@ -108,7 +108,7 @@ c.training.accumulate = 1
 c.training.optimizer = CN()
 c.training.optimizer.type = 'SGD'
 c.training.optimizer.lr = 0.01
-c.training.optimizer.mode = 'none' # none, groups, types
+c.training.optimizer.mode = 'default' # none, groups, types, default
 c.training.optimizer.para_group = None
 # [{'backbone':{'lr':1.0},
 #   'neck':{'lr':1.0},

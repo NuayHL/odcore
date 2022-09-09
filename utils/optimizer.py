@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import warnings
 
 class BuildOptimizer():
     default_para_groups = ['backbone','neck','head']
@@ -10,7 +11,13 @@ class BuildOptimizer():
 
     def build(self, model: nn.Module):
         self.para_groups = {}
-        self.defined_groups = self.config_opt.para_group[0].keys()
+        try:
+            self.defined_groups = self.config_opt.para_group[0].keys()
+        except:
+            if self.config_opt.mode != 'none':
+                warnings.warn('Not define para groups, Please change to other mode or specify para groups!')
+            self.defined_groups = []
+
         if self.config_opt.mode == 'none':
             self.para_groups['all'] = model.parameters()
         else:
