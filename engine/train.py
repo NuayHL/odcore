@@ -240,15 +240,7 @@ class Train():
                 self.save_ckpt('last_epoch')
                 self.logger.info('Complete epoch %d at %.1f min, saving last_epoch.pth as last ckpt'
                                  %(self.current_epoch,(time_epoch_end-time_epoch_start)/60))
-            if self.current_epoch % self.config.training.eval_interval == 0:
-                self.save_ckpt('epoch_%d'%self.current_epoch)
-                self.log_info("Reach eval interval, saving ckpt as epoch_%d.pth"%self.current_epoch)
-                if self.using_val:
-                    try:
-                        self.valfun()
-                    except:
-                        self.print("Error during eval..")
-                        self.log_warn("Error during eval :(")
+            self.after_epoch()
 
     def step_and_update(self, loss_log):
         if not hasattr(self, 'last_step'):
@@ -263,6 +255,17 @@ class Train():
             if self.ema:
                 self.ema.update(self.model)
             self.last_step = self.current_step
+
+    def after_epoch(self):
+        if self.current_epoch % self.config.training.eval_interval == 0:
+            self.save_ckpt('epoch_%d' % self.current_epoch)
+            self.log_info("Reach eval interval, saving ckpt as epoch_%d.pth" % self.current_epoch)
+            if self.using_val:
+                try:
+                    self.valfun()
+                except:
+                    self.print("Error during eval..")
+                    self.log_warn("Error during eval :(")
 
     def warm_up_setting(self):
         if self.current_step <= self.warm_up_steps * self.accumulate:
