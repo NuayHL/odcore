@@ -56,6 +56,14 @@ def xywh_x1y1x2y2(labels_):
     labels[:,3] += labels[:,1]
     return labels
 
+def xywh_x1y1x2y2_nt(labels_):
+    labels = deepcopy(labels_)
+    labels[:,0] -= labels_[:,2] * 0.5
+    labels[:,2] = labels_[:,0] + labels_[:,2] * 0.5
+    labels[:,1] -= labels_[:,3] * 0.5
+    labels[:,3] = labels_[:,1] + labels_[:,3] * 0.5
+    return labels
+
 def x1y1x2y2_xywh(labels_):
     labels = deepcopy(labels_)
     labels[:,2] -= labels[:,0]
