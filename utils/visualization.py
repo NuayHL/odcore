@@ -358,7 +358,7 @@ def draw_scheduler(lf, fin_epoches = 100):
     ax.grid()
     plt.show()
 
-def draw_coco_eval(file_name,save_per_epoch=5, outputImgName="evaluation", logpath="trainingLog", savepath="trainingLog/lossV"):
+def draw_coco_eval(file_name, save_per_epoch=20):
     index = []
     iou = []
     iou_50 = []
@@ -368,7 +368,7 @@ def draw_coco_eval(file_name,save_per_epoch=5, outputImgName="evaluation", logpa
     iou_large = []
     start_index = save_per_epoch
 
-    with open(logpath+'/'+file_name,"r") as f:
+    with open(file_name,"r") as f:
         lines = f.readlines()
     flag = 0
     for line in lines:
@@ -406,7 +406,6 @@ def draw_coco_eval(file_name,save_per_epoch=5, outputImgName="evaluation", logpa
     ax.set(xlabel="Epochs",ylabel="AP",title="Evaluation for "+file_name)
     ax.grid()
     fig.legend(["IoU","IoU.5","IoU.75","IoUs","IoUm","IoUl"])
-    fig.savefig(savepath+"/"+file_name+"_"+outputImgName+".png")
     plt.show()
 
 
