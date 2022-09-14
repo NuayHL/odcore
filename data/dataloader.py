@@ -3,6 +3,7 @@ from torch.utils.data import DataLoader, distributed
 from .dataset import CocoDataset
 
 def build_dataloader(anns_path, img_path, config_data, batch_size, rank, workers, task):
+    assert os.path.exists(img_path),'Cannot Find Image Path!'
     dataset = CocoDataset(anns_path, img_path, config_data, task=task)
     sampler = None if rank == -1 else distributed.DistributedSampler(dataset)
     workers = min(os.cpu_count() // int(os.getenv("WORLD_SIZE", 1)),
