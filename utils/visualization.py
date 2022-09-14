@@ -132,7 +132,7 @@ def _add_bbox_img(img, bboxs=[], type="xywh",color=[0,0,255], score=None, thickn
     if score is not None:
         assert len(score)==len(bboxs), "invalid score shape"
         import json
-        with open("data/categories_coco.json",'r') as fp:
+        with open("odcore/data/categories_coco.json",'r') as fp:
             classname = json.load(fp)
 
     if thickness == None:
@@ -153,8 +153,8 @@ def _add_bbox_img(img, bboxs=[], type="xywh",color=[0,0,255], score=None, thickn
             text = classname[int(score[idx,1].item())]['name']
             text += ":%.2f"%score[idx,0]
             point = list(a)
-            point[1] += 11
-            img = cv2.putText(img, text, point, cv2.FONT_HERSHEY_PLAIN, 1,[255,255,255])
+            point[1] -= 5
+            img = cv2.putText(img, text, point, cv2.FONT_HERSHEY_COMPLEX_SMALL, max(1,thickness-2), color=color)
     return img
 
 def _isArrayLike(obj):
