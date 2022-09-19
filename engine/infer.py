@@ -41,7 +41,7 @@ class Infer():
             print('Please indicating one .pth/.pt file!')
             exit()
 
-    def __call__(self, img):
+    def __call__(self, img, test_para=None):
         if isinstance(img, str):
             img_name = img
             img = cv2.imread(img)
@@ -60,5 +60,8 @@ class Infer():
         sim_sample['imgs'] = torch.unsqueeze(sim_sample['imgs'], dim=0)
         sim_sample['imgs'] = sim_sample['imgs'].to(self.device)
         self.normalizer(sim_sample)
-        result = self.model(sim_sample)
+        if test_para:
+            result = self.model.__getattribute__(test_para)(sim_sample)
+        else:
+            result = self.model(sim_sample)
         return result, ori_img
