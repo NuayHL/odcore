@@ -161,6 +161,30 @@ def _isArrayLike(obj):
     # not working for numpy
     return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
 
+def stack_img(img_list, shape, interval=1):
+    rows, cols = shape
+    assert len(img_list) == rows * cols
+    assert type(img_list[0]) == np.ndarray
+    img_type = img_list[0].dtype
+    img_shape = img_list[0].shape[:2]
+    img_channel = img_list[0].shape[2]
+    insert_col = np.ones((img_shape[0],int(interval),img_channel)).astype(img_type)
+    insert_rows = np.ones((1, int((img_shape[1] + int(interval)) * cols - int(interval)), img_channel)).astype(img_type)
+    rows_stack_imgs = []
+    for row in range(rows):
+        if row != 0:
+            rows_stack_imgs.append(insert_rows)
+        for col in range(cols):
+            if col == 0:
+                row_img = img_list[row * cols]
+            else:
+                add_img = img_list[row * cols + col]
+                add_img = cv2.resize(add_img, img_shape, interpolation=cv2.INTER_LINEAR)
+                row_img = np.concatenate([row_img, insert_col], axis=1)
+                row_img = np.concatenate([row_img, add_img], axis=1)
+        rows_stack_imgs.append(row_img)
+    return np.concatenate(rows_stack_imgs, axis=0)
+
 class LossLog():
     def __init__(self, file_name, is_main_process=True):
         self.file_name = file_name
