@@ -162,6 +162,7 @@ def _isArrayLike(obj):
     return hasattr(obj, '__iter__') and hasattr(obj, '__len__')
 
 def stack_img(img_list, shape, interval=1):
+    '''stack images at shape:(rows, cols), interval filled with 1'''
     rows, cols = shape
     assert len(img_list) == rows * cols
     assert type(img_list[0]) == np.ndarray
@@ -189,6 +190,20 @@ def stack_img(img_list, shape, interval=1):
                 row_img = np.concatenate([row_img, add_img], axis=1)
         rows_stack_imgs.append(row_img)
     return np.concatenate(rows_stack_imgs, axis=0)
+
+def generate_hot_bar(max, min, height, width=None):
+    height = int(height)
+    if width == None:
+        width = height / 10
+    bar = np.ones((height, width)).astype(np.float)
+    interval = (max-min)/float(height-1)
+    for row in range(height):
+        r_row = height - row -1
+        if r_row == height -1:
+            bar[row] *= max
+        else:
+            bar[row] *= min + r_row * interval
+    return bar
 
 class LossLog():
     def __init__(self, file_name, is_main_process=True):
