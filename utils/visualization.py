@@ -177,9 +177,14 @@ def stack_img(img_list, shape, interval=1):
         for col in range(cols):
             if col == 0:
                 row_img = img_list[row * cols]
+                row_img = cv2.resize(row_img, img_shape, interpolation=cv2.INTER_NEAREST)
+                if len(row_img.shape) == 2:
+                    row_img = np.expand_dims(row_img, 2)
             else:
                 add_img = img_list[row * cols + col]
-                add_img = cv2.resize(add_img, img_shape, interpolation=cv2.INTER_LINEAR)
+                add_img = cv2.resize(add_img, img_shape, interpolation=cv2.INTER_NEAREST)
+                if len(add_img.shape) == 2:
+                    add_img = np.expand_dims(add_img, 2)
                 row_img = np.concatenate([row_img, insert_col], axis=1)
                 row_img = np.concatenate([row_img, add_img], axis=1)
         rows_stack_imgs.append(row_img)
