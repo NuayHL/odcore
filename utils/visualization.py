@@ -194,8 +194,8 @@ def stack_img(img_list, shape, interval=1):
 def generate_hot_bar(max, min, height, width=None):
     height = int(height)
     if width == None:
-        width = height / 10
-    bar = np.ones((height, width)).astype(np.float)
+        width = height / 15
+    bar = np.ones((int(height), int(width), 1)).astype(np.float)
     interval = (max-min)/float(height-1)
     for row in range(height):
         r_row = height - row -1
