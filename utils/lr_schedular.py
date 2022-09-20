@@ -12,7 +12,13 @@ class LFScheduler():
         self.lf = lambda x:1.0
         if self.lr_type == 'cosine':
             lrf = self.lr_dict['lrf']
-            self.lf = lambda x: ((1 - math.cos(x * math.pi / self.final_epoch)) / 2) * (lrf - 1) + 1
+            def cosine(x):
+                if x <= self.final_epoch:
+                    return ((1 - math.cos(x * math.pi / self.final_epoch)) / 2) * (lrf - 1) + 1
+                else:
+                    return lrf
+            self.lf = cosine
+            #self.lf = lambda x: ((1 - math.cos(x * math.pi / self.final_epoch)) / 2) * (lrf - 1) + 1
         elif self.lr_type == 'detail_cosine':
             lrf = self.lr_dict['lrf']
             def detail_cosine(x):
