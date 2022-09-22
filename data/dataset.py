@@ -126,6 +126,11 @@ class CocoDataset(Dataset):
         self.get_mosaic(sample2)
         mix_up(sample, sample2)
 
+    def get_ori_image(self, idx):
+        img = self.annotations.imgs[self.image_id[idx]]
+        img = cv2.imread(os.path.join(self.imgPath, img["file_name"]))[:,:,::-1]
+        return img
+
     @staticmethod
     def OD_default_collater(data):
         '''
