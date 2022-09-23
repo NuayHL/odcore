@@ -45,8 +45,7 @@ class Eval():
             except:
                 print("FAIL")
                 raise
-            model = self.model.to(self.device)
-            model.eval()
+            self.model = self.model.to(self.device)
         else:
             print('Please indicating one .pth/.pt file!')
             exit()
