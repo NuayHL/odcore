@@ -212,12 +212,7 @@ class Train():
         for epoch in range(self.start_epoch, self.final_epoch + 1):
             self.current_epoch = epoch
             self.model.train()
-            if (self.final_epoch + 1 - self.current_epoch) == self.config.training.last_no_mosaic:
-                self.print("%d epoches before the end of training, change to no mosaic training."%self.config.training.last_no_mosaic)
-                self.change_to_no_mosaic_training()
-                self.log_info("%d epoches before the end of training, change to no mosaic training"%self.config.training.last_no_mosaic)
-            if self.rank != -1:
-                self.train_loader.sampler.set_epoch(epoch)
+            self.before_epoch()
             self.print('Epoch: %d/%d'%(self.current_epoch, self.final_epoch))
             time_epoch_start = time.time()
             self.optimizer.zero_grad()
@@ -255,6 +250,20 @@ class Train():
             if self.ema:
                 self.ema.update(self.model)
             self.last_step = self.current_step
+
+    def before_epoch(self):
+        if (self.final_epoch + 1 - self.current_epoch) == 20:
+            self.print("Begin evaluate on every 5 epoch")
+            self.config.training.eval_interval = 5
+            self.log_info("Begin evaluate on every 5 epoch")
+        if (self.final_epoch + 1 - self.current_epoch) == self.config.training.last_no_mosaic:
+            self.print(
+                "%d epoches before the end of training, change to no mosaic training." % self.config.training.last_no_mosaic)
+            self.change_to_no_mosaic_training()
+            self.log_info(
+                "%d epoches before the end of training, change to no mosaic training" % self.config.training.last_no_mosaic)
+        if self.rank != -1:
+            self.train_loader.sampler.set_epoch(self.current_epoch)
 
     def after_epoch(self):
         if self.current_epoch % self.config.training.eval_interval == 0:
