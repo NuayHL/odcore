@@ -35,6 +35,11 @@ class LFScheduler():
                     if x < list[idx]: return ratio ** idx
                 return ratio ** len(list)
             self.lf = step_lr
+        elif self.lr_type == 'linear':
+            lrf = self.lr_dict['lrf']
+            def linear(x):
+                return 1.0 - x * (1.0 - lrf) / self.final_epoch
+            self.lf = linear
         else:
             raise NotImplementedError
 
