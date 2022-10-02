@@ -41,6 +41,7 @@ class Infer():
             print('Please indicating one .pth/.pt file!')
             exit()
 
+    @torch.no_grad()
     def __call__(self, img, test_para=None):
         if isinstance(img, str):
             img_name = img
