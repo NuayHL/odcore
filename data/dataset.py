@@ -240,6 +240,7 @@ class VideoDataset():
         self.size = (int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
                      int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
         self.lenth = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.info_print()
 
     def info_print(self):
         print('Video: %s' % self.path)
