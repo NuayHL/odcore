@@ -20,6 +20,7 @@ def get_infer_args_parser(add_help=True):
     parser.add_argument('--conf-file', default='', type=str, help='config file path')
     parser.add_argument('--ckpt-file', default='', type=str, help='load the .pth file which is compatible with config ')
     parser.add_argument('--device', default='0', type=str, help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+    parser.add_argument('--size', default='ori', type=str, help='output size, i.e. hd, fhd, qhd, uhd or ori')
     parser.add_argument('--labeled', action='store_true', help='show bbox with label and score')
     return parser
 

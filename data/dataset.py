@@ -232,3 +232,30 @@ def check_anno_bbox(coco_style_json):
         json.dump(ori_coco_ann, f)
 
 
+class VideoDataset():
+    def __init__(self, video_path):
+        self.path = video_path
+        self.cap = cv2.VideoCapture(video_path)
+        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
+        self.size = (int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                     int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        self.lenth = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    def info_print(self):
+        print('Video: %s' % self.path)
+        print('\t-FPS: %f' % self.fps)
+        print('\t-TOTAL FRAMES: %d' % self.lenth)
+        print('\t-SIZE: %d X %d' % (self.size[0], self.size[1]))
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        success, frame = self.cap.read()
+        if not success:
+            self.cap.release()
+            raise StopIteration
+        return frame[:, :, ::-1]
+
+    def __len__(self):
+        return self.lenth
