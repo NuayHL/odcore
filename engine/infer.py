@@ -6,6 +6,7 @@ import cv2
 from copy import deepcopy
 
 from data.data_augment import LetterBox, Normalizer
+from data.dataset import CocoDataset
 from utils.paralle import de_parallel
 
 class Infer():
@@ -42,27 +43,56 @@ class Infer():
             exit()
 
     @torch.no_grad()
-    def __call__(self, img, test_para=None):
-        if isinstance(img, str):
-            img_name = img
-            img = cv2.imread(img)
-            img = img[:, :, ::-1]
-        elif isinstance(img, np.ndarray):
-            img_name = 'Happy'
-        else:
-            raise NotImplementedError("Unknown inputType")
-        ori_img = deepcopy(img)
-        sim_sample = {'img':img, 'anns': np.ones((1,4)).astype(np.float32),
-                      'ids': [img_name], 'shapes': [(img.shape[1],img.shape[0])]}
-        self.letterbox(sim_sample)
-        sim_sample['imgs'] = np.transpose(sim_sample['img'], (2, 0, 1))
-        del sim_sample['img']
-        sim_sample['imgs'] = torch.from_numpy(sim_sample['imgs']).float() / 255
-        sim_sample['imgs'] = torch.unsqueeze(sim_sample['imgs'], dim=0)
-        sim_sample['imgs'] = sim_sample['imgs'].to(self.device)
-        self.normalizer(sim_sample)
+    def __call__(self, *imgs, test_para=None):
+        ori_imgs = list()
+        batched_samples = list()
+        for img in imgs:
+            if isinstance(img, str):
+                img_name = img
+                img = cv2.imread(img)
+                img = img[:, :, ::-1]
+            elif isinstance(img, np.ndarray):
+                img_name = 'infer_image'
+            else:
+                raise NotImplementedError("Unknown inputType")
+            ori_imgs.append(deepcopy(img))
+            sim_sample = {'img':img, 'anns': np.ones((1,4)).astype(np.float32),
+                          'id': img_name, 'shape': (img.shape[1],img.shape[0])}
+            self.letterbox(sim_sample)
+            batched_samples.append(sim_sample)
+        batched_samples = CocoDataset.OD_default_collater(batched_samples)
+        batched_samples['imgs'] = batched_samples['imgs'].to(self.device).float() / 255
+        self.normalizer(batched_samples)
         if test_para:
-            result = self.model.__getattribute__(test_para)(sim_sample)
+            results = self.model.__getattribute__(test_para)(batched_samples)
         else:
-            result = self.model(sim_sample)
-        return result, ori_img
+            results = self.model(batched_samples)
+        return results, ori_imgs
+
+    ## Single Image Infer
+    # @torch.no_grad()
+    # def __call__(self, img, test_para=None):
+    #     print('go to first')
+    #     if isinstance(img, str):
+    #         img_name = img
+    #         img = cv2.imread(img)
+    #         img = img[:, :, ::-1]
+    #     elif isinstance(img, np.ndarray):
+    #         img_name = 'Happy'
+    #     else:
+    #         raise NotImplementedError("Unknown inputType")
+    #     ori_img = deepcopy(img)
+    #     sim_sample = {'img':img, 'anns': np.ones((1,4)).astype(np.float32),
+    #                   'ids': [img_name], 'shapes': [(img.shape[1],img.shape[0])]}
+    #     self.letterbox(sim_sample)
+    #     sim_sample['imgs'] = np.transpose(sim_sample['img'], (2, 0, 1))
+    #     del sim_sample['img']
+    #     sim_sample['imgs'] = torch.from_numpy(sim_sample['imgs']).float() / 255
+    #     sim_sample['imgs'] = torch.unsqueeze(sim_sample['imgs'], dim=0)
+    #     sim_sample['imgs'] = sim_sample['imgs'].to(self.device)
+    #     self.normalizer(sim_sample)
+    #     if test_para:
+    #         result = self.model.__getattribute__(test_para)(sim_sample)
+    #     else:
+    #         result = self.model(sim_sample)
+    #     return result, ori_img
