@@ -252,10 +252,14 @@ class Train():
             self.last_step = self.current_step
 
     def before_epoch(self):
-        if (self.final_epoch + 1 - self.current_epoch) == 20:
+        if (self.final_epoch + 1 - self.current_epoch) == 50:
             self.print("Begin evaluate on every 5 epoch")
             self.config.training.eval_interval = 5
             self.log_info("Begin evaluate on every 5 epoch")
+        if (self.final_epoch + 1 - self.current_epoch) == 20:
+            self.print("Begin evaluate on every 1 epoch")
+            self.config.training.eval_interval = 1
+            self.log_info("Begin evaluate on every 1 epoch")
         if (self.final_epoch + 1 - self.current_epoch) == self.config.training.last_no_mosaic:
             self.print(
                 "%d epoches before the end of training, change to no mosaic training." % self.config.training.last_no_mosaic)
@@ -266,9 +270,10 @@ class Train():
             self.train_loader.sampler.set_epoch(self.current_epoch)
 
     def after_epoch(self):
-        if self.current_epoch % self.config.training.eval_interval == 0:
+        if self.current_epoch % self.args.save_interval == 0:
             self.save_ckpt('epoch_%d' % self.current_epoch)
-            self.log_info("Reach eval interval, saving ckpt as epoch_%d.pth" % self.current_epoch)
+            self.log_info("Reach save interval, saving ckpt as epoch_%d.pth" % self.current_epoch)
+        if self.current_epoch % self.config.training.eval_interval == 0:
             if self.using_val:
                 try:
                     self.valfun()
@@ -415,6 +420,7 @@ class Train():
             self.val_temp_json = os.path.join(self.exp_log_path, 'temp_predictions.json')
             self.val_log = os.path.join(self.exp_log_path, self.exp_log_name + '_val.log')
             self.val_type = self.config.training.val_metric
+            self.best_epoch_file = ['', '', '']
             if self.val_type == 'coco':
                 self.valfun = self.val_coco
                 self.print("Using COCO Metric for eval")
@@ -438,9 +444,9 @@ class Train():
         if not self.is_main_process: return
         self.model.eval()
         if not hasattr(self, 'map'):
-            self.map = 0.0
+            self.map = [0.0, 0.0, 0.0]
         if not hasattr(self, 'map50'):
-            self.map50 = 0.0
+            self.map50 = [0.0, 0.0, 0.0]
         itr_in_val = len(self.val_loader)
         results = []
         self.print('Begin Evaluation:')
@@ -465,9 +471,30 @@ class Train():
         self.print('mAP: %.2f, mAP50: %.2f'%(self.map_, self.map50_))
         self.log_info('Evaluation Complete at %.2f s, mAP: %.2f, mAP50: %.2f'
                       %(time_end-time_start, self.map_, self.map50_))
-        if self.map50_ > self.map50:
-            self.save_model('best_epoch')
-            self.map, self.map50 = self.map_, self.map50_
+
+        for i in range(3):
+            if self.map50_ >= self.map50[i]:
+                save_name = 'epoch_%d' % self.current_epoch
+                if not os.path.exists(os.path.join(self.exp_log_path, save_name+'.pth')):
+                    self.save_ckpt(save_name)
+                self.map.insert(i, self.map_)
+                self.map50.insert(i, self.map50_)
+                self.best_epoch_file.insert(i, save_name)
+
+                disuse_name = self.best_epoch_file[3]
+
+                self.map = self.map[:3]
+                self.map50 = self.map50[:3]
+                self.best_epoch_file = self.best_epoch_file[:3]
+
+                if disuse_name != '':
+                    try:
+                        os.remove(os.path.join(self.exp_log_path, disuse_name+'.pth'))
+                    except:
+                        self.log_warn('Error when deleting .pth file %s' % disuse_name)
+
+                self.log_info('New Best Val Epoch: %s, %s, %s' % tuple(self.best_epoch_file))
+                break
 
     def build_optimizer(self):
         if self.config.training.optimizer.mode == 'default':
