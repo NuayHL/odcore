@@ -36,7 +36,7 @@ def x1y1x2y2_xywh_(labels):
 
 def x1y1wh_x1y1x2y2(labels):
     '''labels: np.ndarray or torch.Tensor with shape:n x (4+)'''
-    new_labels = deepcopy(labels)
+    new_labels = labels.clone() if isinstance(labels, torch.Tensor) else labels.copy()
     new_labels[:,2] += new_labels[:,0]
     new_labels[:,3] += new_labels[:,1]
     return new_labels

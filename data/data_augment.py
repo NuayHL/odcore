@@ -202,6 +202,28 @@ class Mosaic():
         self.random_affine(sim_sample)
         return sim_sample['img'], sim_sample['anns']
 
+class ImgEnhance():
+    def __call__(self, img):
+        img = self._finetune_lightness(img)
+        img = self._get_contrast(img)
+        return img
+
+    def _finetune_lightness(self, img):
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV).astype(np.float)
+        lightness = img[:, :, 2].mean()
+        ratio = 255/2/lightness
+        img[:, :, 2] *= ratio
+        img = np.clip(img, a_min=0, a_max=255)
+        img = cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_HSV2RGB)
+        return img
+
+    def _get_contrast(self, img):
+        min_pixel = np.percentile(img, 2.5)
+        max_pixel = np.percentile(img, 97.5)
+        img = np.clip(img, a_min=min_pixel, a_max=max_pixel)
+        img = cv2.normalize(img, None, 0, 255, norm_type=cv2.NORM_MINMAX)
+        return img
+
 def get_transform_matrix(img_shape, new_shape, degrees, scale, shear, translate):
     new_height, new_width = new_shape
     # Center

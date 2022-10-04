@@ -15,12 +15,18 @@ cfg = get_default_cfg()
 class DummyModel(nn.Module):
     def __init__(self):
         super(DummyModel, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=10, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn = nn.BatchNorm2d(10)
-        self.conv2 = nn.Conv2d(in_channels=10, out_channels=2, kernel_size=3, stride=2, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(in_channels=2, out_channels=2, kernel_size=3, stride=1, padding=1, bias=True)
+        self.bn = nn.BatchNorm2d(2)
+        self.conv2 = nn.Conv2d(in_channels=2, out_channels=1, kernel_size=3, stride=2, padding=1, bias=False)
         self.relu = nn.ReLU(inplace=True)
         
-    def forward(self,x):
+    def forward(self, x):
         return self.relu(self.conv2(self.bn(self.conv1(x))))
 
-
+# model = DummyModel()
+# m = model.modules()
+# for ms in m:
+#     if "Conv" in ms.__class__.__name__:
+#         print(ms.bias)
+#         nn.init.uniform_(ms.bias, 1.0,1.0)
+#         print(ms.bias)
