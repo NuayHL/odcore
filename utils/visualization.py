@@ -402,24 +402,25 @@ def draw_scheduler(lf, fin_epoches = 100):
     ax.grid()
     plt.show()
 
-def draw_coco_eval(file_name, save_per_epoch=20):
-    index = []
-    iou = []
-    iou_50 = []
-    iou_75 = []
-    iou_small = []
-    iou_medium = []
-    iou_large = []
-    start_index = save_per_epoch
+def draw_coco_eval(file_name):
+    index = [0]
+    iou = [0]
+    iou_50 = [0]
+    iou_75 = [0]
+    iou_small = [0]
+    iou_medium = [0]
+    iou_large = [0]
 
     with open(file_name,"r") as f:
         lines = f.readlines()
     flag = 0
-    for line in lines:
-        if "Acc" in line: flag = 1
+    for id, line in enumerate(lines):
+        if "Epoch" in line:
+            current_epoch = int(line[line.find(':')+1:])
+        if "Acc" in line:
+            flag = 1
         elif flag == 1:
-            index.append(start_index)
-            start_index += save_per_epoch
+            index.append(current_epoch)
             flag += 1
         elif flag == 2:
             iou.append(float(line[-5:]))
@@ -451,5 +452,3 @@ def draw_coco_eval(file_name, save_per_epoch=20):
     ax.grid()
     fig.legend(["IoU","IoU.5","IoU.75","IoUs","IoUm","IoUl"])
     plt.show()
-
-
