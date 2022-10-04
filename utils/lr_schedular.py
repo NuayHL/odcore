@@ -28,13 +28,27 @@ class LFScheduler():
                     return lrf
             self.lf = detail_cosine
         elif self.lr_type == 'step':
-            list = self.lr_dict['milestones']
+            mlist = self.lr_dict['milestones']
             ratio = self.lr_dict['ratio']
             def step_lr(x):
                 for idx in range(len(list)):
-                    if x < list[idx]: return ratio ** idx
+                    if x < mlist[idx]: return ratio ** idx
                 return ratio ** len(list)
             self.lf = step_lr
+        elif self.lr_type == 'poly':
+            mlist = [0] + self.lr_dict['milestones']
+            ratios = [1.0] + self.lr_dict['ratios']
+            assert len(mlist) == len(ratios)
+            def poly_lr(x):
+                for id in range(len(mlist)):
+                    if x >= mlist[id]:
+                        if id == len(mlist) - 1:
+                            return ratios[-1]
+                        elif x < mlist[id + 1]:
+                            return ratios[id] + (ratios[id+1] - ratios[id]) / (mlist[id+1] - mlist[id]) * (x - mlist[id])
+                        else:
+                            continue
+            self.lf = poly_lr
         elif self.lr_type == 'linear':
             lrf = self.lr_dict['lrf']
             def linear(x):
