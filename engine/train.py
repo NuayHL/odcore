@@ -162,6 +162,7 @@ class Train():
         self.print('====================================== GO ======================================')
         self.train()
         self.print('=================================== Complete! ==================================')
+        self.summary()
 
     def pre_train_setting(self):
         self.log_info('Train Type: %s'%self.train_type)
@@ -280,6 +281,11 @@ class Train():
                 except:
                     self.print("Error during eval..")
                     self.log_warn("Error during eval :(")
+
+    def summary(self):
+        if self.using_val:
+            self.print('Best Val Epochs: %s, %s, %s' % tuple(self.best_epoch_file))
+            self.log_info('Best Val Epochs: %s, %s, %s' % tuple(self.best_epoch_file))
 
     def warm_up_setting(self):
         if self.current_step <= self.warm_up_steps * self.accumulate:
