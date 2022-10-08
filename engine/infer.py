@@ -16,7 +16,7 @@ class Infer():
         self.model = model
         self.device = device
         self.letterbox = LetterBox(config.data)
-        self.normalizer = Normalizer(config.data,self.device)
+        self.normalizer = Normalizer(config.data, self.device)
         self.load_model()
 
     def load_model(self):
@@ -30,7 +30,8 @@ class Infer():
                     self.model.load_state_dict(ckpt_file['model'])
                 except:
                     print('FAIL')
-                    print('\t-Parallel Model Loading:',end=' ')
+                    raise
+                    print('\t-Parallel Model Loading:', end=' ')
                     self.model.load_state_dict(de_parallel(ckpt_file['model']))
                 print('SUCCESS')
             except:
