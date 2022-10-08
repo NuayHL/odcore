@@ -30,7 +30,6 @@ class Infer():
                     self.model.load_state_dict(ckpt_file['model'])
                 except:
                     print('FAIL')
-                    raise
                     print('\t-Parallel Model Loading:', end=' ')
                     self.model.load_state_dict(de_parallel(ckpt_file['model']))
                 print('SUCCESS')
