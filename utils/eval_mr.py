@@ -38,7 +38,7 @@ class CrowdHumanEval:
             self.params.imgIds = sorted(cocoGt.getImgIds())
             self.params.catIds = sorted(cocoGt.getCatIds())
 
-    def _prepare(self, id_setup):
+    def _prepare(self):
         """
         Prepare ._gts and ._dts for evaluation based on params
         :return: None
@@ -57,18 +57,6 @@ class CrowdHumanEval:
         self._imageNum = len(self.cocoGt.getImgIds())
         for gt in gts:
             gt["ignore"] = gt["ignore"] if "ignore" in gt else 0
-            gt["ignore"] = (
-                1
-                if (
-                    gt["height"] < self.params.HtRng[id_setup][0]
-                    or gt["height"] > self.params.HtRng[id_setup][1]
-                )
-                or (
-                    gt["vis_ratio"] < self.params.VisRng[id_setup][0]
-                    or gt["vis_ratio"] > self.params.VisRng[id_setup][1]
-                )
-                else gt["ignore"]
-            )
             if gt["ignore"] == 1:
                 self._ignNum += 1
             else:
@@ -83,7 +71,7 @@ class CrowdHumanEval:
         self.evalImgs = defaultdict(list)  # per-image per-category evaluation results
         self.eval = {}  # accumulated evaluation results
 
-    def evaluate(self, id_setup):
+    def evaluate(self):
         """
         Run per image evaluation on given images and store results (a list of dict) in self.evalImgs
         :return: None
@@ -102,16 +90,14 @@ class CrowdHumanEval:
         p.maxDets = sorted(p.maxDets)
         self.params = p
 
-        self._prepare(id_setup)
+        self._prepare()
         # loop through images, area range, max detection number
         catIds = p.catIds if p.useCats else [-1]
 
         evaluateImg = self.evaluateImg
         maxDet = p.maxDets[-1]
-        HtRng = self.params.HtRng[id_setup]
-        VisRng = self.params.VisRng[id_setup]
         self.evalImgs = [
-            evaluateImg(imgId, catId, HtRng, VisRng, maxDet)
+            evaluateImg(imgId, catId,maxDet)
             for catId in catIds
             for imgId in p.imgIds
         ]
@@ -175,7 +161,7 @@ class CrowdHumanEval:
                 ious[i, j] = float(t) / unionarea
         return ious
 
-    def evaluateImg(self, imgId, catId, hRng, vRng, maxDet):
+    def evaluateImg(self, imgId, catId, maxDet):
         """
         perform evaluation for single category and image
         :return: dict (single image results)
@@ -200,13 +186,6 @@ class CrowdHumanEval:
         gt = [gt[i] for i in gtind]
         dtind = np.argsort([-d["score"] for d in dt], kind="mergesort")
         dt = [dt[i] for i in dtind[0:maxDet]]
-        # exclude dt out of height range
-        dt = [
-            d
-            for d in dt
-            if d["height"] >= hRng[0] / self.params.expFilter
-            and d["height"] < hRng[1] * self.params.expFilter
-        ]
         dtind = np.array([int(d["id"] - dt[0]["id"]) for d in dt])
 
         # load computed ious
@@ -265,8 +244,6 @@ class CrowdHumanEval:
         return {
             "image_id": imgId,
             "category_id": catId,
-            "hRng": hRng,
-            "vRng": vRng,
             "maxDet": maxDet,
             "dtIds": [d["id"] for d in dt],
             "gtIds": [g["id"] for g in gt],
@@ -299,7 +276,7 @@ class CrowdHumanEval:
 
         # create dictionary for future indexing
         _pe = self._paramsEval
-        catIds = [1]  # _pe.catIds if _pe.useCats else [-1]
+        catIds = [0]  # _pe.catIds if _pe.useCats else [-1]
         setK = set(catIds)
         setM = set(_pe.maxDets)
         setI = set(_pe.imgIds)
@@ -372,7 +349,7 @@ class CrowdHumanEval:
         toc = time.time()
         print("DONE (t={:0.2f}s).".format(toc - tic))
 
-    def summarize(self, id_setup=0):
+    def summarize(self):
         """
         Compute and display summary metrics for evaluation results.
         Note this functin can *only* be applied on the default parameter setting
@@ -380,17 +357,6 @@ class CrowdHumanEval:
 
         def _summarize(iouThr=None, maxDets=100):
             p = self.params
-            iStr = " {:<18} {} @ {:<18} [ IoU={:<9} | height={:>6s} | visibility={:>6s} ] = {:0.2f}% \n"
-            titleStr = "Average Miss Rate"
-            typeStr = "(MR)"
-            setupStr = p.SetupLbl[id_setup]
-            iouStr = (
-                "{:0.2f}:{:0.2f}".format(p.iouThrs[0], p.iouThrs[-1])
-                if iouThr is None
-                else "{:0.2f}".format(iouThr)
-            )
-            heightStr = "[{:0.0f}:{:0.0f}]".format(p.HtRng[id_setup][0], p.HtRng[id_setup][1])
-            occlStr = "[{:0.2f}:{:0.2f}]".format(p.VisRng[id_setup][0], p.VisRng[id_setup][1])
 
             mind = [i for i, mDet in enumerate(p.maxDets) if mDet == maxDets]
 
@@ -448,10 +414,12 @@ class CrowdHumanEval:
             return AP, rpX[-1]
 
         ap, recall = eval_AP()
-        mr = _summarize(iouThr=0.5, maxDets=1000)
-        print("--------------------------------------")
-        print("|AP: {:.4} | Recall:{:.4}|  MR:{:.4}|".format(ap, recall, mr))
-        print("--------------------------------------")
+        mr = _summarize(iouThr=None, maxDets=1000)
+        # for eval output
+        self.stats.append(float(ap))
+        self.stats.append(float(mr))
+        self.stats.append(float(recall))
+        print(" AP    :{:.4}\n Recall:{:.4}\n MR    :{:.4}".format(float(ap), float(recall), float(mr)))
         if not self.eval:
             raise Exception("Please run accumulate() first")
         return {"AP": ap, "Recall": recall, "MR": mr}
@@ -480,8 +448,6 @@ class CrowdHumanParams:
 
         self.iouThrs = np.array([0.5])
 
-        self.HtRng = [[0, 1e5 ** 2], [50, 1e5 ** 2], [50, 1e5 ** 2]]
-        self.VisRng = [[0.0, 1e5 ** 2], [0.65, 1e5 ** 2], [0.2, 0.65]]
         self.SetupLbl = ["MR", "Reasonable"]
 
     def __init__(self, iouType="segm"):
