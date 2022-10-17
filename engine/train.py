@@ -165,7 +165,7 @@ class Train():
         self.summary()
 
     def pre_train_setting(self):
-        self.log_info('Train Type: %s'%self.train_type)
+        self.log_info('Train Type: %s' % self.train_type)
 
         self.safety_mode = self.args.safety_mode
         self.using_loss_protect = self.safety_mode
@@ -464,6 +464,7 @@ class Train():
             with torch.no_grad():
                 results.append(self.model(samples))
             progressbar((i + 1) / float(itr_in_val), barlenth=40)
+        self.model.get_stats()
         result_for_json = []
         for result in results:
             result_for_json.extend(self.model.coco_parse_result(result))

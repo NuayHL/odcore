@@ -18,6 +18,7 @@ class Infer():
         self.letterbox = LetterBox(config.data)
         self.normalizer = Normalizer(config.data, self.device)
         self.load_model()
+        self.other_forward = args.forward_func
 
     def load_model(self):
         print('Model Parameters: ', end='')
@@ -43,7 +44,8 @@ class Infer():
             exit()
 
     @torch.no_grad()
-    def __call__(self, *imgs, test_para=None):
+    def __call__(self, *imgs, other_forward=None):
+        other_forward = other_forward if other_forward else self.other_forward
         ori_imgs = list()
         batched_samples = list()
         for img in imgs:
@@ -56,17 +58,20 @@ class Infer():
             else:
                 raise NotImplementedError("Unknown inputType")
             ori_imgs.append(deepcopy(img))
-            sim_sample = {'img':img, 'anns': np.ones((1,4)).astype(np.float32),
-                          'id': img_name, 'shape': (img.shape[1],img.shape[0])}
+            sim_sample = {'img':img, 'anns': np.ones((1, 4)).astype(np.float32),
+                          'id': img_name, 'shape': (img.shape[1], img.shape[0])}
             self.letterbox(sim_sample)
             batched_samples.append(sim_sample)
         batched_samples = CocoDataset.OD_default_collater(batched_samples)
         batched_samples['imgs'] = batched_samples['imgs'].to(self.device).float() / 255
         self.normalizer(batched_samples)
-        if test_para:
-            results = self.model.__getattribute__(test_para)(batched_samples)
+        if other_forward:
+            results = self.model.__getattribute__(other_forward)(batched_samples)
         else:
             results = self.model(batched_samples)
+        self.model.get_stats()
+        if not results:
+            exit()
         return results, ori_imgs
 
     ## Single Image Infer

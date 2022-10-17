@@ -19,6 +19,7 @@ class Eval():
         self.model = model
         self.device = device
         self.normalizer = Normalizer(config.data, device)
+        self.other_forward = args.forward_func
 
     def build_eval_loader(self):
         self.loader = build_dataloader(self.config.training.val_img_anns_path,
@@ -52,15 +53,15 @@ class Eval():
 
     def set_log(self):
         self.log_dir = os.path.dirname(self.args.ckpt_file)
-        self.val_img_result_json_name = self.args.ckpt_file[:-4] + '_evalresult.json'
-        self.val_log_name = self.args.ckpt_file[:-4] + '_fullCOCOresult.log'
+        self.val_img_result_json_name = os.path.splitext(self.args.ckpt_file)[0] + '_evalresult.json'
+        self.val_log_name = os.path.splitext(self.args.ckpt_file)[0] + '_fullCOCOresult.log'
 
-    def eval(self, force_eval=True):
+    def eval(self):
         self.set_log()
         result_json_found = os.path.exists(self.val_img_result_json_name)
         self.build_eval_loader()
         if not result_json_found: print('Prediction Not Found, Eval the Model')
-        if force_eval or not result_json_found:
+        if self.args.force_eval or not result_json_found or self.other_forward:
             self.load_model()
             self.model.eval()
             results = []
@@ -69,8 +70,14 @@ class Eval():
                 samples['imgs'] = samples['imgs'].to(self.device).float() / 255
                 self.normalizer(samples)
                 with torch.no_grad():
-                    results.append(self.model(samples))
+                    if self.other_forward:
+                        results = self.model.__getattribute__(self.other_forward)(samples)
+                    else:
+                        results.append(self.model(samples))
                 progressbar((i+1)/float(self.itr_in_epoch), barlenth=40)
+            self.model.get_stats()
+            if self.other_forward:
+                exit()
             print('Infer Complete, Sorting')
             self.result_for_json = []
             for result in results:

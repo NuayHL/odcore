@@ -24,6 +24,7 @@ def get_infer_args_parser(add_help=True):
     parser.add_argument('--device', default='0', type=str, help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--size', default='ori', type=str, help='output size, i.e. hd, fhd, qhd, uhd or ori')
     parser.add_argument('--labeled', action='store_true', help='show bbox with label and score')
+    parser.add_argument('--forward-func', default='', type=str, help='using other forward func')
     return parser
 
 def get_eval_args_parser(add_help=True):
@@ -35,6 +36,7 @@ def get_eval_args_parser(add_help=True):
     parser.add_argument('--batch-size', default=32, type=int, help='batch size for the loader')
     parser.add_argument('--type', default='coco', type=str, help='choose evaluation metrics')
     parser.add_argument('--force-eval', action='store_true', help='ignore the previous prediction cache and predict again')
+    parser.add_argument('--forward-func', default='', type=str, help='using other forward func')
     return parser
 
 if __name__ == '__main__':
