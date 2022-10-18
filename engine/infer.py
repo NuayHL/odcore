@@ -70,7 +70,7 @@ class Infer():
         else:
             results = self.model(batched_samples)
         self.model.get_stats()
-        if not results:
+        if other_forward:
             exit()
         return results, ori_imgs
 
