@@ -164,7 +164,7 @@ def _isArrayLike(obj):
 def stack_img(img_list, shape, interval=1):
     '''stack images at shape:(rows, cols), interval filled with 1'''
     rows, cols = shape
-    assert len(img_list) == rows * cols
+    assert len(img_list) == rows * cols, '%d and %d' %(len(img_list), rows * cols)
     assert type(img_list[0]) == np.ndarray
     img_type = img_list[0].dtype
     img_shape = img_list[0].shape[:2]
