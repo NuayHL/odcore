@@ -20,7 +20,7 @@ from utils.exp import Exp
 from utils.paralle import de_parallel
 from utils.optimizer import BuildOptimizer
 from utils.lr_schedular import LFScheduler
-from engine.eval import coco_eval
+from engine.eval import coco_eval, gen_eval
 
 # Set os.environ['CUDA_VISIBLE_DEVICES'] = '-1' and rank = -1 for cpu training
 #
@@ -430,6 +430,9 @@ class Train():
             if self.val_type == 'coco':
                 self.valfun = self.val_coco
                 self.print("Using COCO Metric for eval")
+            elif self.val_type == 'mr':
+                self.valfun = self.val_mr
+                self.print('Using CrowdHuman Metric for eval')
             else:
                 raise NotImplementedError('Invalid Evaluation Metric')
         else:
@@ -492,6 +495,64 @@ class Train():
 
                 self.map = self.map[:3]
                 self.map50 = self.map50[:3]
+                self.best_epoch_file = self.best_epoch_file[:3]
+
+                if disuse_name != '':
+                    try:
+                        os.remove(os.path.join(self.exp_log_path, disuse_name+'.pth'))
+                    except:
+                        self.log_warn('Error when deleting .pth file %s' % disuse_name)
+
+                self.log_info('New Best Val Epoch: %s, %s, %s' % tuple(self.best_epoch_file))
+                break
+
+    def val_mr(self):
+        if not self.is_main_process: return
+        self.model.eval()
+        if not hasattr(self, 'ap'):
+            self.ap = [0.0, 0.0, 0.0]
+        if not hasattr(self, 'ar'):
+            self.ar = [0.0, 0.0, 0.0]
+        itr_in_val = len(self.val_loader)
+        results = []
+        self.print('Begin Evaluation:')
+        self.log_info('Evaluation begin at epoch %d'%self.current_epoch)
+        time_start = time.time()
+        for i, samples in enumerate(self.val_loader):
+            samples['imgs'] = samples['imgs'].to(self.device).float() / 255
+            self.normalizer(samples)
+            with torch.no_grad():
+                results.append(self.model(samples))
+            progressbar((i + 1) / float(itr_in_val), barlenth=40)
+        self.model.get_stats()
+        result_for_json = []
+        for result in results:
+            result_for_json.extend(self.model.coco_parse_result(result))
+        with open(self.val_temp_json, 'w') as f:
+            json.dump(result_for_json, f)
+        self.ap_, self.ar_ = gen_eval(self.val_temp_json,
+                                      self.val_loader.dataset.annotations,
+                                      self.val_log,
+                                      'Epoch:%s'%str(self.current_epoch),
+                                      eval_type='mr')
+        time_end = time.time()
+        self.print('AP: %.2f, AR: %.2f'%(self.ap_, self.ar_))
+        self.log_info('Evaluation Complete at %.2f s, AP: %.2f, AR: %.2f'
+                      %(time_end-time_start, self.ap_, self.ar_))
+
+        for i in range(3):
+            if self.ap_ >= self.ap[i]:
+                save_name = 'epoch_%d' % self.current_epoch
+                if not os.path.exists(os.path.join(self.exp_log_path, save_name+'.pth')):
+                    self.save_ckpt(save_name)
+                self.map.insert(i, self.map_)
+                self.map50.insert(i, self.map50_)
+                self.best_epoch_file.insert(i, save_name)
+
+                disuse_name = self.best_epoch_file[3]
+
+                self.ap = self.ap[:3]
+                self.ar = self.ar[:3]
                 self.best_epoch_file = self.best_epoch_file[:3]
 
                 if disuse_name != '':
