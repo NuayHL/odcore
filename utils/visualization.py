@@ -388,6 +388,46 @@ class LossLog():
         if "||" in lossline: return True
         else: return False
 
+class ValLog:
+    coco_metrics = ["IoU", "IoU.5", "IoU.75", "IoUs", "IoUm", "IoUl"]
+    def __init__(self, file_name):
+        self.file_name = file_name
+        self.real_file_name = os.path.splitext(file_name)[0]
+        self.data = dict()
+        with open(file_name, "r") as f:
+            self.lines = f.readlines()
+
+    def coco_val(self, zero_start=True):
+        eval_metrics = self.coco_metrics
+        for metric in eval_metrics:
+            self.data[metric] = ([], []) if not zero_start else ([0], [0])
+        flag = -1
+        for id, line in enumerate(self.lines):
+            if "Epoch" in line:
+                current_epoch = int(line[line.find(':') + 1:])
+            if "Acc" in line:
+                for metric in eval_metrics:
+                    self.data[metric][0].append(current_epoch)
+                flag = 0
+            elif flag == 0:
+                flag += 1
+            elif 1 <= flag < 1+len(eval_metrics):
+                self.data[eval_metrics[flag-1]][1].append(float(line[-5:]))
+                flag += 1
+                continue
+            else:
+                flag = -1
+
+    def coco_draw(self, zero_start=True):
+        self.coco_val(zero_start=zero_start)
+        fig, ax = plt.subplots()
+        for metric in self.coco_metrics:
+            ax.plot(*self.data[metric])
+        ax.set(xlabel="Epochs", ylabel="AP", title="Evaluation for " + self.real_file_name)
+        ax.grid()
+        fig.legend(self.coco_metrics)
+        plt.show()
+
 def draw_scheduler(lf, fin_epoches = 100):
     sim_optimizer = torch.optim.SGD(torch.nn.Conv2d(1,1,1).parameters(),lr=1)
     scheduler = torch.optim.lr_scheduler.LambdaLR(sim_optimizer, lr_lambda=lf)
@@ -402,53 +442,14 @@ def draw_scheduler(lf, fin_epoches = 100):
     ax.grid()
     plt.show()
 
-def draw_coco_eval(file_name):
-    index = [0]
-    iou = [0]
-    iou_50 = [0]
-    iou_75 = [0]
-    iou_small = [0]
-    iou_medium = [0]
-    iou_large = [0]
 
-    with open(file_name,"r") as f:
-        lines = f.readlines()
-    flag = 0
-    for id, line in enumerate(lines):
-        if "Epoch" in line:
-            current_epoch = int(line[line.find(':')+1:])
-        if "Acc" in line:
-            flag = 1
-        elif flag == 1:
-            index.append(current_epoch)
-            flag += 1
-        elif flag == 2:
-            iou.append(float(line[-5:]))
-            flag += 1
-        elif flag == 3:
-            iou_50.append(float(line[-5:]))
-            flag += 1
-        elif flag == 4:
-            iou_75.append(float(line[-5:]))
-            flag += 1
-        elif flag == 5:
-            iou_small.append(float(line[-5:]))
-            flag += 1
-        elif flag == 6:
-            iou_medium.append(float(line[-5:]))
-            flag += 1
-        elif flag == 7:
-            iou_large.append(float(line[-5:]))
-            flag = 0
-
+def draw_val_iou50(*val_lines):
     fig, ax = plt.subplots()
-    ax.plot(index, iou)
-    ax.plot(index, iou_50)
-    ax.plot(index, iou_75)
-    ax.plot(index, iou_small)
-    ax.plot(index, iou_medium)
-    ax.plot(index, iou_large)
-    ax.set(xlabel="Epochs",ylabel="AP",title="Evaluation for "+file_name)
+    real_file_names = list()
+    for val_line in val_lines:
+        ax.plot(*val_line)
+        real_file_names.append(file)
+    ax.set(xlabel="Epochs", ylabel="AP", title="Evaluation comparison")
     ax.grid()
-    fig.legend(["IoU","IoU.5","IoU.75","IoUs","IoUm","IoUl"])
+    fig.legend(real_file_names)
     plt.show()
