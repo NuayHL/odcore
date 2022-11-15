@@ -61,6 +61,7 @@ class Train():
             self.device = 0
         else:
             self.device = self.rank
+        self.using_DDP = False if self.rank == -1 else True
 
     def check_and_set_train_type(self):
         self.train_type = ''
@@ -467,7 +468,8 @@ class Train():
             with torch.no_grad():
                 results.append(self.model(samples))
             progressbar((i + 1) / float(itr_in_val), barlenth=40)
-        self.model.get_stats()
+        if not self.using_DDP:
+            self.model.get_stats()
         result_for_json = []
         for result in results:
             result_for_json.extend(self.model.coco_parse_result(result))
@@ -524,7 +526,8 @@ class Train():
             with torch.no_grad():
                 results.append(self.model(samples))
             progressbar((i + 1) / float(itr_in_val), barlenth=40)
-        self.model.get_stats()
+        if not self.using_DDP:
+            self.model.get_stats()
         result_for_json = []
         for result in results:
             result_for_json.extend(self.model.coco_parse_result(result))
