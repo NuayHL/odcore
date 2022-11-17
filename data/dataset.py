@@ -56,7 +56,7 @@ class CocoDataset(Dataset):
         '''
         base output:
             sample['img'] = whc np.uint8 img
-            sample['anns] = n x (x1 y1 w h c) np.float32 img
+            sample['anns] = n x (x y w h c) np.float32 img
         '''
         sample = self.load_sample(idx)
         if self.task == 'train' and random.random() < self.config_data.mosaic:
