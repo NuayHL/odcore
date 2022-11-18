@@ -484,8 +484,8 @@ class Train():
                                          self.val_log,
                                          'Epoch:%s'%str(self.current_epoch))
         time_end = time.time()
-        self.print('mAP: %.2f, mAP50: %.2f'%(self.map_, self.map50_))
-        self.log_info('Evaluation Complete at %.2f s, mAP: %.2f, mAP50: %.2f'
+        self.print('mAP: %.6f, mAP50: %.6f'%(self.map_, self.map50_))
+        self.log_info('Evaluation Complete at %.2f s, mAP: %.6f, mAP50: %.6f'
                       %(time_end-time_start, self.map_, self.map50_))
 
         for i in range(3):
@@ -543,8 +543,8 @@ class Train():
                                       'Epoch:%s'%str(self.current_epoch),
                                       eval_type='mr')
         time_end = time.time()
-        self.print('AP: %.2f, AR: %.2f'%(self.ap_, self.ar_))
-        self.log_info('Evaluation Complete at %.2f s, AP: %.2f, AR: %.2f'
+        self.print('AP: %.6f, AR: %.6f'%(self.ap_, self.ar_))
+        self.log_info('Evaluation Complete at %.2f s, AP: %.6f, AR: %.6f'
                       %(time_end-time_start, self.ap_, self.ar_))
 
         for i in range(3):
@@ -552,8 +552,8 @@ class Train():
                 save_name = 'epoch_%d' % self.current_epoch
                 if not os.path.exists(os.path.join(self.exp_log_path, save_name+'.pth')):
                     self.save_ckpt(save_name)
-                self.map.insert(i, self.map_)
-                self.map50.insert(i, self.map50_)
+                self.ap.insert(i, self.ap_)
+                self.ar.insert(i, self.ar_)
                 self.best_epoch_file.insert(i, save_name)
 
                 disuse_name = self.best_epoch_file[3]
