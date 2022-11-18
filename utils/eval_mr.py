@@ -417,8 +417,8 @@ class CrowdHumanEval:
         mr = _summarize(iouThr=None, maxDets=1000)
         # for eval output
         self.stats.append(float(ap))
-        self.stats.append(float(mr))
         self.stats.append(float(recall))
+        self.stats.append(float(mr))
         print(" AP    :{:.4}\n Recall:{:.4}\n MR    :{:.4}".format(float(ap), float(recall), float(mr)))
         if not self.eval:
             raise Exception("Please run accumulate() first")
