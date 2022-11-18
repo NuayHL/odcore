@@ -44,4 +44,9 @@ Model.coco_parse_result(List: list[result])
     -Input: List: list[result]
     -Output: List: list[{coco_pred1},{coco_pred2}...]
 ```
+```
+Model.get_coco_parser()
+    return Model.coco_parse_result
+        - Return the upper function
+```
 *Copyright© NuayHL 2022. All right reserved*

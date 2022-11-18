@@ -186,13 +186,16 @@ class Train():
         self.build_scheduler()
         self.load_ckpt()
         assert self.final_epoch > self.start_epoch
-        self.load_model_to_device()
-        self.load_optimizer_to_device()
 
         self.batchsize = self.config.training.batch_size
         self.accumulate = int(self.config.training.accumulate)
         self.print('Batch size:%d, Accumulate:%d'%(self.batchsize, self.accumulate))
         self.print('\t-SimBatch size:%d'%(self.batchsize * self.accumulate))
+
+        self.val_setting()
+        self.load_model_to_device()
+        self.load_optimizer_to_device()
+
         self.using_autocast = self.config.training.using_autocast and self.device != 'cpu'
         self.print('Using autocast:', self.using_autocast)
         self.using_warm_up = True if self.config.training.warm_up_steps != 0 else False
@@ -202,7 +205,6 @@ class Train():
             self.print('\t-Warming step:', self.warm_up_steps)
 
         self.build_train_dataloader()
-        self.val_setting()
         self.scaler = amp.GradScaler()
         self.itr_in_epoch = len(self.train_loader)
         if self.train_type in ['[Checkpoint]', '[Resume]']:
@@ -430,9 +432,11 @@ class Train():
             self.best_epoch_file = ['', '', '']
             if self.val_type == 'coco':
                 self.valfun = self.val_coco
+                self.coco_parse = self.model.get_coco_parser()
                 self.print("Using COCO Metric for eval")
             elif self.val_type == 'mr':
                 self.valfun = self.val_mr
+                self.coco_parse = self.model.get_coco_parser()
                 self.print('Using CrowdHuman Metric for eval')
             else:
                 raise NotImplementedError('Invalid Evaluation Metric')
@@ -472,7 +476,7 @@ class Train():
             self.model.get_stats()
         result_for_json = []
         for result in results:
-            result_for_json.extend(self.model.coco_parse_result(result))
+            result_for_json.extend(self.coco_parse(result))
         with open(self.val_temp_json, 'w') as f:
             json.dump(result_for_json, f)
         self.map_, self.map50_ = coco_eval(self.val_temp_json,
@@ -530,7 +534,7 @@ class Train():
             self.model.get_stats()
         result_for_json = []
         for result in results:
-            result_for_json.extend(self.model.coco_parse_result(result))
+            result_for_json.extend(self.coco_parse(result))
         with open(self.val_temp_json, 'w') as f:
             json.dump(result_for_json, f)
         self.ap_, self.ar_ = gen_eval(self.val_temp_json,
