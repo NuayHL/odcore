@@ -434,7 +434,8 @@ class ValLog:
             elif flag == 0:
                 flag += 1
             elif 1 <= flag < 1+len(eval_metrics):
-                self.data[eval_metrics[flag-1]][1].append(float(line[-6:]))
+                dots = line.find('.')
+                self.data[eval_metrics[flag-1]][1].append(float(line[dots-1:]))
                 flag += 1
                 continue
             else:
