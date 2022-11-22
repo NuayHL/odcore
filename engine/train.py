@@ -289,6 +289,14 @@ class Train():
         if self.using_val:
             self.print('Best Val Epochs: %s, %s, %s' % tuple(self.best_epoch_file))
             self.log_info('Best Val Epochs: %s, %s, %s' % tuple(self.best_epoch_file))
+            if hasattr(self, 'ap'):
+                val_result = self.ap[0]
+                self.print('Best AP: %.6f' % val_result)
+                self.log_info('Best AP: %.6f' % val_result)
+            elif hasattr(self, 'map50'):
+                val_result = self.map50[0]
+                self.print('Best AP.5: %.6f' % val_result)
+                self.log_info('Best AP.5: %.6f' % val_result)
 
     def warm_up_setting(self):
         if self.current_step <= self.warm_up_steps * self.accumulate:
