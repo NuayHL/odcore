@@ -56,7 +56,7 @@ class Eval():
         self.val_img_result_json_name = os.path.splitext(self.args.ckpt_file)[0] + '_evalresult.json'
         self.val_log_name = os.path.splitext(self.args.ckpt_file)[0] + '_fullCOCOresult.log'
 
-    def eval(self):
+    def eval(self, record_name=None):
         self.set_log()
         result_json_found = os.path.exists(self.val_img_result_json_name)
         self.build_eval_loader()
@@ -87,9 +87,10 @@ class Eval():
             print('Prediction Result saved in %s'%self.val_img_result_json_name)
         else:
             print('Found Prediction json file %s'%self.val_img_result_json_name)
-        gen_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name,
-                 eval_type=self.args.type)
+        val_result = gen_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name,
+                              pre_str=record_name, eval_type=self.args.type)
         print('Full COCO result saved in %s'%self.val_log_name)
+        return val_result
 
 def coco_eval(dt, gt:COCO, log_name, pre_str=None):
     '''return map, map50'''
