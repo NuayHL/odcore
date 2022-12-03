@@ -6,11 +6,14 @@ import numpy as np
 from time import time
 from pycocotools.cocoeval import COCOeval
 from evaluate.eval_crowdhuman import CrowdHumanEval
+from evaluate.compute_APMR import compute_APMR
+from evaluate.compute_JI import evaluation_all
 from pycocotools.coco import COCO
 from data.dataloader import build_dataloader
 from data.data_augment import Normalizer
 from utils.misc import progressbar
 from utils.paralle import de_parallel
+from utils.coco2odgt import coco2odgt_det
 
 class Eval():
     def __init__(self, config, args, model, device):
@@ -87,9 +90,13 @@ class Eval():
             print('Prediction Result saved in %s'%self.val_img_result_json_name)
         else:
             print('Found Prediction json file %s'%self.val_img_result_json_name)
-        val_result = gen_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name,
-                              pre_str=record_name, eval_type=self.args.type)
-        print('Full COCO result saved in %s'%self.val_log_name)
+        if self.args.type == 'mip':
+            val_result = mip_eval(self.val_img_result_json_name, self.val_log_name, pre_str=record_name)
+            print('Full CrowdHuman result saved in %s'%self.val_log_name)
+        else:
+            val_result = gen_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name,
+                                  pre_str=record_name, eval_type=self.args.type)
+            print('Full COCO result saved in %s'%self.val_log_name)
         return val_result
 
 def coco_eval(dt, gt:COCO, log_name, pre_str=None):
@@ -144,3 +151,15 @@ def gen_eval(dt, gt:COCO, log_name, pre_str=None, eval_type='coco'):
         raise
     sys.stdout = ori_std
     return evaluator.stats[:2]
+
+def mip_eval(coco_dt, log_name, pre_str=None):
+    odgt_det_file = coco2odgt_det(coco_dt)
+    ap, mr = compute_APMR(odgt_det_file, 'box')
+    ji = evaluation_all(odgt_det_file, 'box')
+    with open(log_name, 'a') as f:
+        if pre_str: f.writelines(pre_str)
+        f.writelines('mAP: %.4f' % ap)
+        f.writelines('mMR: %.4f' % mr)
+        f.writelines('JI: %.4f' % ji)
+        f.write('\n\n\n')
+    return ap, mr
