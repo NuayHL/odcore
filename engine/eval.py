@@ -5,7 +5,7 @@ import torch
 import numpy as np
 from time import time
 from pycocotools.cocoeval import COCOeval
-from utils.eval_mr import CrowdHumanEval
+from evaluate.eval_crowdhuman import CrowdHumanEval
 from pycocotools.coco import COCO
 from data.dataloader import build_dataloader
 from data.data_augment import Normalizer
