@@ -9,14 +9,14 @@ from multiprocessing import Queue, Process
 from tqdm import tqdm
 import numpy as np
 
-from JIToolkits.JI_tools import compute_matching, get_ignores
+from evaluate.JIToolkits.JI_tools import compute_matching, get_ignores
 
 # def add_path(path):
 #     if path not in sys.path:
 #         sys.path.insert(0, path)
 # root_dir = '../utility/'
 # add_path(os.path.join(root_dir))
-import misc_utils as misc_utils
+import evaluate.misc_utils as misc_utils
 
 gtfile = '/CrowdDetection/annotation_val.odgt'
 nr_procs = 6
@@ -47,10 +47,10 @@ def evaluation_all(path, target_key):
             p.join()
         pbar.close()
         line, mean_ratio = gather(results)
-        JI_list.append(line)
+        JI_list.append(mean_ratio)
         line = 'score_thr:{:.1f}, {}'.format(score_thr, line)
         print(line)
-    return min(JI_list)
+    return max(JI_list)
 
 def compute_JI_with_ignore(result_queue, records, score_thr, target_key, bm_thresh=0.5):
     for record in records:

@@ -158,8 +158,8 @@ def mip_eval(coco_dt, log_name, pre_str=None):
     ji = evaluation_all(odgt_det_file, 'box')
     with open(log_name, 'a') as f:
         if pre_str: f.writelines(pre_str)
-        f.writelines('mAP: %.4f' % ap)
-        f.writelines('mMR: %.4f' % mr)
-        f.writelines('JI: %.4f' % ji)
-        f.write('\n\n\n')
+        f.writelines('mAP: %.4f\n' % ap)
+        f.writelines('mMR: %.4f\n' % mr)
+        f.writelines('JI: %.4f\n' % ji)
+        f.write('\n\n')
     return ap, mr

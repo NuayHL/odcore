@@ -1,7 +1,7 @@
 # This code is copy from https://github.com/megvii-model/CrowdDetection/tree/master/evaluate
 
 import argparse
-from APMRToolkits import *
+from evaluate.APMRToolkits import *
 
 gt_path = 'CrowdHuman/annotation_val.odgt'
 dbName = 'human'
