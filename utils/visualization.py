@@ -461,6 +461,22 @@ class ValLog:
         fig.legend(self.mr_metrics)
         plt.show()
 
+import itertools
+def draw_matrix(data:np.ndarray, width, height, savefile=None):
+    assert data.min() >= 0.0 and data.max() <= 1.0
+    plt.figure(figsize=(2*(width+1)/7, 2*height/7))
+    plt.imshow(data, cmap=plt.cm.Blues)
+    for i, j in itertools.product(range(height), range(width)):
+        plt.text(j, i, format(data[i, j], '.2f'),
+                 horizontalalignment="center",
+                 color="white" if data[i, j] > 0.5 else "black",
+                 fontsize=6)
+    plt.axis('off')
+    plt.tight_layout()
+    if savefile:
+        plt.savefig(fname=savefile, dpi=300)
+    plt.show()
+
 def draw_scheduler(lf, fin_epoches = 100):
     sim_optimizer = torch.optim.SGD(torch.nn.Conv2d(1,1,1).parameters(),lr=1)
     scheduler = torch.optim.lr_scheduler.LambdaLR(sim_optimizer, lr_lambda=lf)
@@ -476,13 +492,4 @@ def draw_scheduler(lf, fin_epoches = 100):
     plt.show()
 
 
-def draw_val_iou50(*val_lines):
-    fig, ax = plt.subplots()
-    real_file_names = list()
-    for val_line in val_lines:
-        ax.plot(*val_line)
-        real_file_names.append(file)
-    ax.set(xlabel="Epochs", ylabel="AP", title="Evaluation comparison")
-    ax.grid()
-    fig.legend(real_file_names)
-    plt.show()
+
