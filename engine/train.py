@@ -257,9 +257,10 @@ class Train():
 
     def before_epoch(self):
         if (self.final_epoch + 1 - self.current_epoch) == 50:
-            self.print("Begin evaluate on every 5 epoch")
-            self.config.training.eval_interval = 5
-            self.log_info("Begin evaluate on every 5 epoch")
+            if self.config.training.eval_interval > 5:
+                self.print("Begin evaluate on every 5 epoch")
+                self.config.training.eval_interval = 5
+                self.log_info("Begin evaluate on every 5 epoch")
         if (self.final_epoch + 1 - self.current_epoch) == 20:
             self.print("Begin evaluate on every 1 epoch")
             self.config.training.eval_interval = 1
