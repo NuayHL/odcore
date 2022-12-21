@@ -8,12 +8,14 @@ from pycocotools.cocoeval import COCOeval
 from evaluate.eval_crowdhuman import CrowdHumanEval
 from evaluate.compute_APMR import compute_APMR
 from evaluate.compute_JI import evaluation_all
+from evaluate.ECPB.eval import eval as ECPeval
 from pycocotools.coco import COCO
 from data.dataloader import build_dataloader
 from data.data_augment import Normalizer
 from utils.misc import progressbar
 from utils.paralle import de_parallel
 from utils.coco2odgt import coco2odgt_det
+from utils.coco2ecp import coco2ecp_det
 
 class Eval():
     def __init__(self, config, args, model, device):
@@ -93,6 +95,9 @@ class Eval():
         if self.args.type == 'mip':
             val_result = mip_eval(self.val_img_result_json_name, self.val_log_name, pre_str=record_name)
             print('Full CrowdHuman result saved in %s'%self.val_log_name)
+        elif self.args.type == 'ecp':
+            ecp_eval(self.val_img_result_json_name)
+            val_result = None
         else:
             val_result = gen_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name,
                                   pre_str=record_name, eval_type=self.args.type)
@@ -163,3 +168,7 @@ def mip_eval(coco_dt, log_name, pre_str=None):
         f.writelines('JI: %.4f\n' % ji)
         f.write('\n\n')
     return ap, mr
+
+def ecp_eval(coco_dt):
+    ecp_det = coco2ecp_det(coco_dt)
+    ECPeval('day', 'val', det_path=ecp_det)
