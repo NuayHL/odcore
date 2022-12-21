@@ -184,6 +184,7 @@ class Train():
         self.print('Batch size:%d, Accumulate:%d'%(self.batchsize, self.accumulate))
         self.print('\t-SimBatch size:%d'%(self.batchsize * self.accumulate))
         self.build_train_dataloader()
+        self.itr_in_epoch = len(self.train_loader)
 
         self.final_epoch = self.config.training.final_epoch
         self.load_finetune_model()
@@ -206,7 +207,6 @@ class Train():
             self.print('\t-Warming step:', self.warm_up_steps)
 
         self.scaler = amp.GradScaler()
-        self.itr_in_epoch = len(self.train_loader)
         if self.train_type in ['[Checkpoint]', '[Resume]']:
             self.current_step = (self.start_epoch - 1) * int(self.itr_in_epoch / self.accumulate)
         else:
