@@ -17,7 +17,7 @@ def coco2ecp_det(coco_det_path):
     }
     """
     import glob
-    eval_id = glob.glob('ECP/%s/img/%s/*/*' % ('day', 'val'))
+    eval_id = glob.glob('ECP/%s/labels/%s/*/*' % ('day', 'val'))
     eval_id = [os.path.splitext(os.path.basename(img_path))[0] for img_path in eval_id]
 
     storage_path = os.path.splitext(coco_det_path)[0]
