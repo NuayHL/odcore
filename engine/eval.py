@@ -64,9 +64,9 @@ class Eval():
     def eval(self, record_name=None):
         self.set_log()
         result_json_found = os.path.exists(self.val_img_result_json_name)
-        self.build_eval_loader()
         if not result_json_found: print('Prediction Not Found, Eval the Model')
         if self.args.force_eval or not result_json_found or self.other_forward:
+            self.build_eval_loader()
             self.load_model()
             self.model.eval()
             results = []
