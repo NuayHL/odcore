@@ -1,6 +1,6 @@
 import os
 
-from test__ECPB import statistics
+from . import statistics
 from .dataloader import load_data_ecp
 from .match import Evaluator, Result, compare_all
 from .params import ParamsFactory, IoU
