@@ -99,6 +99,8 @@ class Eval():
             ecp_eval(self.val_img_result_json_name)
             val_result = None
         else:
+            if not hasattr(self, 'loader'):
+                self.build_eval_loader()
             val_result = gen_eval(self.val_img_result_json_name, self.loader.dataset.annotations, self.val_log_name,
                                   pre_str=record_name, eval_type=self.args.type)
             print('Full COCO result saved in %s'%self.val_log_name)
