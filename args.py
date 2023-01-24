@@ -12,6 +12,7 @@ def get_train_args_parser(add_help=True):
     parser.add_argument('--device', default='0', type=str, help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--eval-interval', default=20, type=int, help='evaluate at every interval epochs')
     parser.add_argument('--save-interval', default=50, type=int, help='save ckpt at every interval epochs')
+    parser.add_argument('--step-lr', action='store_true', help='if using step wise learning rate')
     parser.add_argument('--safety-mode', action='store_true', help='if using loss protect measures')
     return parser
 

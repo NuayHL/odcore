@@ -19,7 +19,7 @@ from utils.misc import progressbar, loss_dict_to_str
 from utils.exp import Exp
 from utils.paralle import de_parallel
 from utils.optimizer import BuildOptimizer
-from utils.lr_schedular import LFScheduler
+from utils.lr_schedular import LFScheduler, LFScheduler_Step
 from engine.eval import coco_eval, gen_eval
 
 # Set os.environ['CUDA_VISIBLE_DEVICES'] = '-1' and rank = -1 for cpu training
@@ -179,6 +179,13 @@ class Train():
         self.model.set(self.args, self.device)
         self.normalizer = Normalizer(self.config.data,self.device)
 
+        self.batchsize = self.config.training.batch_size
+        self.accumulate = int(self.config.training.accumulate)
+        self.print('Batch size:%d, Accumulate:%d'%(self.batchsize, self.accumulate))
+        self.print('\t-SimBatch size:%d'%(self.batchsize * self.accumulate))
+        self.build_train_dataloader()
+        self.itr_in_epoch = len(self.train_loader)
+
         self.final_epoch = self.config.training.final_epoch
         self.load_finetune_model()
         self.ema = ModelEMA(self.model) if self.is_main_process else None
@@ -186,11 +193,6 @@ class Train():
         self.build_scheduler()
         self.load_ckpt()
         assert self.final_epoch > self.start_epoch
-
-        self.batchsize = self.config.training.batch_size
-        self.accumulate = int(self.config.training.accumulate)
-        self.print('Batch size:%d, Accumulate:%d'%(self.batchsize, self.accumulate))
-        self.print('\t-SimBatch size:%d'%(self.batchsize * self.accumulate))
 
         self.val_setting()
         self.load_model_to_device()
@@ -204,11 +206,9 @@ class Train():
         if self.using_warm_up:
             self.print('\t-Warming step:', self.warm_up_steps)
 
-        self.build_train_dataloader()
         self.scaler = amp.GradScaler()
-        self.itr_in_epoch = len(self.train_loader)
         if self.train_type in ['[Checkpoint]', '[Resume]']:
-            self.current_step = (self.start_epoch - 1) * int(self.itr_in_epoch)
+            self.current_step = (self.start_epoch - 1) * int(self.itr_in_epoch / self.accumulate)
         else:
             self.current_step = 0
 
@@ -234,7 +234,6 @@ class Train():
                 self.step_and_update(loss_log)
                 self.current_step += 1
             time_epoch_end = time.time()
-            self.scheduler.step()
             if self.is_main_process:
                 self.save_ckpt('last_epoch')
                 self.logger.info('Complete epoch %d at %.1f min, saving last_epoch.pth as last ckpt'
@@ -251,6 +250,7 @@ class Train():
             self.scaler.step(self.optimizer)
             self.scaler.update()
             self.optimizer.zero_grad()
+            self.scheduler.step()
             if self.ema:
                 self.ema.update(self.model)
             self.last_step = self.current_step
@@ -301,13 +301,13 @@ class Train():
 
     def warm_up_setting(self):
         if self.current_step <= self.warm_up_steps * self.accumulate:
-            self.accumulate = max(1, np.interp(self.current_step, [0, self.warm_up_steps], [1, self.accumulate]).round())
+            self.accumulate = max(1, np.interp(self.current_step, [0, self.warm_up_steps * self.accumulate * 0.6], [1, self.accumulate]).round())
             for k, param in enumerate(self.optimizer.param_groups):
                 warmup_bias_lr = self.config.training.optimizer.warm_up_init_lr
-                param['lr'] = np.interp(self.current_step, [0, self.warm_up_steps],
+                param['lr'] = np.interp(self.current_step, [0, self.warm_up_steps * self.accumulate],
                                         [warmup_bias_lr, param['initial_lr'] * self.lf(self.current_epoch-1)])
                 if 'momentum' in param:
-                    param['momentum'] = np.interp(self.current_step, [0, self.warm_up_steps],
+                    param['momentum'] = np.interp(self.current_step, [0, self.warm_up_steps * self.accumulate],
                                                   [self.config.training.optimizer.warm_up_init_momentum, self.config.training.optimizer.momentum])
 
     def load_finetune_model(self):
@@ -612,8 +612,8 @@ class Train():
     def build_scheduler(self):
         if not hasattr(self, 'optimizer'):
             self.build_optimizer()
-        lrf_builder = LFScheduler(self.config)
-        lf = lrf_builder.get_lr_fun()
+        lrf_builder = LFScheduler_Step(self.config)
+        lf = lrf_builder.get_lr_fun(int(self.itr_in_epoch/self.accumulate))
         self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lf)
         self.lf = lf
 
