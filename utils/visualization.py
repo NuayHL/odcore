@@ -150,7 +150,11 @@ def _add_bbox_img(img, bboxs=[], type="xywh",color=[0,0,255], score=None, thickn
         img = np.ascontiguousarray(img)
         img = cv2.rectangle(img,a,b,color, thickness=thickness, **kwargs)
         if score is not None:
-            text = classname[int(score[idx,1].item())]['name']
+            try:
+                text = classname[int(score[idx, 1].item())]['name']
+            except:
+                print("class at %d do not exist" % int(score[idx, 1].item()))
+                raise
             text += ":%.2f"%score[idx,0]
             point = list(a)
             point[1] -= 5
