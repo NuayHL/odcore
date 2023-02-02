@@ -301,7 +301,7 @@ class Train():
 
     def warm_up_setting(self):
         if self.current_step <= self.warm_up_steps * self.accumulate:
-            self.accumulate = max(1, np.interp(self.current_step, [0, self.warm_up_steps * self.accumulate * 0.6], [1, self.accumulate]).round())
+            # self.accumulate = max(1, np.interp(self.current_step, [0, self.warm_up_steps * self.accumulate * 0.6], [1, self.accumulate]).round())
             for k, param in enumerate(self.optimizer.param_groups):
                 warmup_bias_lr = self.config.training.optimizer.warm_up_init_lr
                 param['lr'] = np.interp(self.current_step, [0, self.warm_up_steps * self.accumulate],
