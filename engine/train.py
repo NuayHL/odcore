@@ -276,8 +276,8 @@ class Train():
 
     def after_epoch(self):
         if self.current_epoch % self.args.save_interval == 0:
-            self.save_ckpt('epoch_%d' % self.current_epoch)
-            self.log_info("Reach save interval, saving ckpt as epoch_%d.pth" % self.current_epoch)
+            self.save_ckpt('epoch_%d_reserved' % self.current_epoch)
+            self.log_info("Reach save interval, saving ckpt as epoch_%d_reserved.pth" % self.current_epoch)
         if self.current_epoch % self.config.training.eval_interval == 0:
             if self.using_val:
                 try:
