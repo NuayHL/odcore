@@ -395,6 +395,7 @@ class LossLog():
 class ValLog:
     coco_metrics = ["IoU", "IoU.5", "IoU.75", "IoUs", "IoUm", "IoUl"]
     mr_metrics = ['AP', 'AR', 'MR']
+    crowdhuman_metrics = ['mAP', 'mMR']
     def __init__(self, file_name):
         self.file_name = file_name
         self.real_file_name = os.path.splitext(file_name)[0]
@@ -445,6 +446,25 @@ class ValLog:
             else:
                 flag = -1
 
+    def mip_val(self, zero_start=True):
+        eval_metrics = self.crowdhuman_metrics
+        for metric in eval_metrics:
+            self.data[metric] = ([], []) if not zero_start else ([0], [0])
+        flag = -1
+        for id, line in enumerate(self.lines):
+            if "Epoch" in line:
+                current_epoch = int(line[line.find(':') + 1:])
+                for metric in eval_metrics:
+                    self.data[metric][0].append(current_epoch)
+                flag = 1
+            elif 1 <= flag < 1+len(eval_metrics):
+                dots = line.find('.')
+                self.data[eval_metrics[flag-1]][1].append(float(line[dots-1:]))
+                flag += 1
+                continue
+            else:
+                flag = -1
+
     def coco_draw(self, zero_start=True):
         self.coco_val(zero_start=zero_start)
         fig, ax = plt.subplots()
@@ -463,6 +483,16 @@ class ValLog:
         ax.set(xlabel="Epochs", ylabel="AP", title="Evaluation for " + self.real_file_name)
         ax.grid()
         fig.legend(self.mr_metrics)
+        plt.show()
+
+    def mip_draw(self, zero_start=True):
+        self.mip_val(zero_start=zero_start)
+        fig, ax = plt.subplots()
+        for metric in self.crowdhuman_metrics:
+            ax.plot(*self.data[metric])
+        ax.set(xlabel="Epochs", ylabel="AP", title="Evaluation for " + self.real_file_name)
+        ax.grid()
+        fig.legend(self.crowdhuman_metrics)
         plt.show()
 
 import itertools

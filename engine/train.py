@@ -20,7 +20,7 @@ from utils.exp import Exp
 from utils.paralle import de_parallel
 from utils.optimizer import BuildOptimizer
 from utils.lr_schedular import LFScheduler
-from engine.eval import coco_eval, gen_eval
+from engine.eval import coco_eval, gen_eval, mip_eval4training
 
 # Set os.environ['CUDA_VISIBLE_DEVICES'] = '-1' and rank = -1 for cpu training
 #
@@ -71,6 +71,8 @@ class Train():
         self.check_resume()
         self.check_ckpt_finetune()
         self.print('Train Type: ', self.train_type)
+        if self.train_type == '[FineTune]':
+            self.print('    Prepare evaluation at beginning')
 
     def check_resume(self):
         if self.using_resume:
@@ -215,8 +217,8 @@ class Train():
     def train(self):
         for epoch in range(self.start_epoch, self.final_epoch + 1):
             self.current_epoch = epoch
-            self.model.train()
             self.before_epoch()
+            self.model.train()
             self.print('Epoch: %d/%d'%(self.current_epoch, self.final_epoch))
             time_epoch_start = time.time()
             self.optimizer.zero_grad()
@@ -256,6 +258,7 @@ class Train():
             self.last_step = self.current_step
 
     def before_epoch(self):
+        self.first_val()
         if (self.final_epoch + 1 - self.current_epoch) == 50:
             if self.config.training.eval_interval > 5:
                 self.print("Begin evaluate on every 5 epoch")
@@ -446,6 +449,10 @@ class Train():
             elif self.val_type == 'mr':
                 self.valfun = self.val_mr
                 self.coco_parse = self.model.get_coco_parser()
+                self.print('Using COCO based MR Metric for eval')
+            elif self.val_type == 'mip':
+                self.valfun = self.val_mip
+                self.coco_parse = self.model.get_coco_parser()
                 self.print('Using CrowdHuman Metric for eval')
             else:
                 raise NotImplementedError('Invalid Evaluation Metric')
@@ -453,6 +460,18 @@ class Train():
             self.using_val = False
             self.print("Val path not specify or not exist, No eval")
         self.build_val_dataloader()
+
+    def first_val(self):
+        if self.using_fine_tune and self.using_val:
+            if not hasattr(self, 'first_val_flag'):
+                self.first_val_flag = False
+            if not self.first_val_flag:
+                try:
+                    self.valfun()
+                except:
+                    self.print("Error during eval..")
+                    self.log_warn("Error during eval :(")
+                self.first_val_flag = True
 
     def build_val_dataloader(self):
         if self.is_main_process and self.using_val:
@@ -569,6 +588,62 @@ class Train():
 
                 self.ap = self.ap[:3]
                 self.ar = self.ar[:3]
+                self.best_epoch_file = self.best_epoch_file[:3]
+
+                if disuse_name != '':
+                    try:
+                        os.remove(os.path.join(self.exp_log_path, disuse_name+'.pth'))
+                    except:
+                        self.log_warn('Error when deleting .pth file %s' % disuse_name)
+
+                self.log_info('New Best Val Epoch: %s, %s, %s' % tuple(self.best_epoch_file))
+                break
+
+    def val_mip(self):
+        if not self.is_main_process: return
+        self.model.eval()
+        if not hasattr(self, 'ap'):
+            self.ap = [0.0, 0.0, 0.0]
+        if not hasattr(self, 'mr'):
+            self.mr = [0.0, 0.0, 0.0]
+        itr_in_val = len(self.val_loader)
+        results = []
+        self.print('Begin Evaluation:')
+        self.log_info('Evaluation begin at epoch %d'%self.current_epoch)
+        time_start = time.time()
+        for i, samples in enumerate(self.val_loader):
+            samples['imgs'] = samples['imgs'].to(self.device).float() / 255
+            self.normalizer(samples)
+            with torch.no_grad():
+                results.append(self.model(samples))
+            progressbar((i + 1) / float(itr_in_val), barlenth=40)
+        if not self.using_DDP:
+            self.model.get_stats()
+        result_for_json = []
+        for result in results:
+            result_for_json.extend(self.coco_parse(result))
+        with open(self.val_temp_json, 'w') as f:
+            json.dump(result_for_json, f)
+        self.ap_, self.mr_ = mip_eval4training(self.val_temp_json,
+                                               self.val_log,
+                                               'Epoch:%s'%str(self.current_epoch),)
+        time_end = time.time()
+        self.log_info('Evaluation Complete at %.2f s, mAP: %.4f, mMR: %.4f'
+                      %(time_end-time_start, self.ap_, self.mr_))
+
+        for i in range(3):
+            if self.ap_ >= self.ap[i]:
+                save_name = 'epoch_%d' % self.current_epoch
+                if not os.path.exists(os.path.join(self.exp_log_path, save_name+'.pth')):
+                    self.save_ckpt(save_name)
+                self.ap.insert(i, self.ap_)
+                self.mr.insert(i, self.mr_)
+                self.best_epoch_file.insert(i, save_name)
+
+                disuse_name = self.best_epoch_file[3]
+
+                self.ap = self.ap[:3]
+                self.mr = self.mr[:3]
                 self.best_epoch_file = self.best_epoch_file[:3]
 
                 if disuse_name != '':

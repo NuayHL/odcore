@@ -164,12 +164,24 @@ def mip_eval(coco_dt, log_name, pre_str=None):
     ap, mr = compute_APMR(odgt_det_file, 'box')
     ji = evaluation_all(odgt_det_file, 'box')
     with open(log_name, 'a') as f:
-        if pre_str: f.writelines(pre_str)
-        f.writelines('mAP: %.4f\n' % ap)
-        f.writelines('mMR: %.4f\n' % mr)
-        f.writelines('JI: %.4f\n' % ji)
+        if pre_str: f.writelines(pre_str+'\n')
+        f.writelines(' mAP: %.4f\n' % ap)
+        f.writelines(' mMR: %.4f\n' % mr)
+        f.writelines(' JI: %.4f\n' % ji)
         f.write('\n\n')
     return ap, mr
+
+def mip_eval4training(coco_dt, log_name, pre_str=None):
+    """ Without JI computation"""
+    odgt_det_file = coco2odgt_det(coco_dt)
+    ap, mr = compute_APMR(odgt_det_file, 'box')
+    with open(log_name, 'a') as f:
+        if pre_str: f.writelines(pre_str+'\n')
+        f.writelines(' mAP: %.4f\n' % ap)
+        f.writelines(' mMR: %.4f\n' % mr)
+        f.write('\n\n')
+    return ap, mr
+
 
 def ecp_eval(coco_dt):
     ecp_det = coco2ecp_det(coco_dt)
