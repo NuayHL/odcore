@@ -158,7 +158,7 @@ def _add_bbox_img(img, bboxs=[], type="xywh",color=[0,0,255], score=None, thickn
             text += ":%.2f"%score[idx,0]
             point = list(a)
             point[1] -= 5
-            img = cv2.putText(img, text, point, cv2.FONT_HERSHEY_COMPLEX_SMALL, max(1,thickness-2), color=color)
+            img = cv2.putText(img, text, point, cv2.FONT_HERSHEY_COMPLEX_SMALL, max(0.5, thickness-2), color=color)
     return img
 
 def _isArrayLike(obj):
@@ -199,7 +199,7 @@ def generate_hot_bar(max, min, height, width=None):
     height = int(height)
     if width == None:
         width = height / 15
-    bar = np.ones((int(height), int(width), 1)).astype(np.float)
+    bar = np.ones((int(height), int(width), 1)).astype(float)
     interval = (max-min)/float(height-1)
     for row in range(height):
         r_row = height - row -1
