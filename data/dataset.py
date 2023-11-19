@@ -261,6 +261,7 @@ class VideoReader():
     def __len__(self):
         return self.lenth
 
+
 class FileImgReader():
     def __init__(self, image_path):
         self.path = image_path
@@ -269,7 +270,7 @@ class FileImgReader():
         test_img = cv2.imread(os.path.join(self.path, self.image_list[0]))[:, :, ::-1]
         self.size = (test_img.shape[1], test_img.shape[0])
         self.lenth = len(self.image_list)
-        self.fps = 25 # temp use----------------------------------------------------------------------------------------
+        self.fps = 25  # temp use---------------------------------------------------------------------------------------
         self.info_print()
 
     def info_print(self):
