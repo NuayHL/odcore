@@ -8,6 +8,7 @@ from copy import deepcopy
 from data.data_augment import LetterBox, Normalizer
 from data.dataset import CocoDataset
 from utils.paralle import de_parallel
+from utils.visualization import printImg
 
 class Infer():
     def __init__(self, config, args, model, device):
