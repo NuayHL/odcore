@@ -26,6 +26,7 @@ def tran_img(fun):
 
 @tran_img
 def printImg(img, title: str='', type = 0):
+    plt.figure(dpi=300)
     if type == 0: plt.imshow(img)
     else: plt.imshow(img, cmap=plt.cm.gray)
     plt.title(title)
@@ -45,10 +46,29 @@ def dataset_assign_inspection(dataset, imgid, annsidx=None):
     assign_visualization(img, anns, annsidx)
 
 @tran_img
-def show_bbox(img, bboxs=[], type="xywh",color=[0,0,255],score=None, thickness=None, **kwargs):
+def show_bbox(img, bboxs=[], type="xywh",color=[0,255,0],score=None, thickness=None, mono_color=False, **kwargs):
     print('Received bbox:',len(bboxs))
-    img = _add_bbox_img(img, bboxs=bboxs, type=type,color=color,score=score, thickness=thickness, **kwargs)
+    img = _add_bbox_img(img, bboxs=bboxs, type=type,color=color,score=score, thickness=thickness,
+                        mono_color=mono_color, **kwargs)
     printImg(img)
+
+@tran_img
+def saveImg(img, title: str='', type = 0):
+    plt.figure(dpi=300)
+    if type == 0: plt.imshow(img)
+    else: plt.imshow(img, cmap=plt.cm.gray)
+    plt.title(title)
+    plt.axis('off')
+    plt.savefig(title+'.png', format='png')
+    plt.close()
+
+@tran_img
+def save_bbox(img, bboxs=[], type="xywh",color=[0,255,0],score=None, thickness=None, title='default', mono_color=False,
+              **kwargs):
+    print('Received bbox:',len(bboxs))
+    img = _add_bbox_img(img, bboxs=bboxs, type=type,color=color,score=score, thickness=thickness,
+                        mono_color=mono_color, **kwargs)
+    saveImg(img, title=title)
 
 @tran_img
 def assign_visualization(img, anns, assignresult, anchors, annsidx=None,
@@ -113,7 +133,7 @@ def _add_point_img(img, points, color=[0,0,255], thickness=None):
         img_ = cv2.circle(img_, (point_x, point_y), radius=1, color=color, thickness=thickness)
     return img_
 
-def _add_bbox_img(img, bboxs=[], type="xywh",color=[0,0,255], score=None, thickness=None, **kwargs):
+def _add_bbox_img(img, bboxs=[], type="xywh",color=[0,0,255], score=None, thickness=None, mono_color=False, **kwargs):
     '''
     :param img: str for file path/np.ndarray (w,h,c)
     :param bboxs: one or lists or np.ndarray
@@ -125,7 +145,8 @@ def _add_bbox_img(img, bboxs=[], type="xywh",color=[0,0,255], score=None, thickn
     '''
     assert type in ["xywh","x1y1x2y2","x1y1wh"],"the bbox format should be \'xywh\' or \'x1y1x2y2\' or \'x1y1wh\'"
     if isinstance(bboxs, np.ndarray):
-        assert len(bboxs.shape)==2 and bboxs.shape[1]>=4, "invalid bboxes shape for np.ndarray"
+        assert len(bboxs.shape)==2 and bboxs.shape[1]>=4, \
+            "invalid bboxes shape for np.ndarray, bboxs.shape="+str(bboxs.shape)
         bboxs = bboxs.astype(np.int32)
     else:
         bboxs = bboxs if _isArrayLike(bboxs) else [bboxs]
@@ -138,7 +159,12 @@ def _add_bbox_img(img, bboxs=[], type="xywh",color=[0,0,255], score=None, thickn
     if thickness == None:
         shape = img.shape[:2]
         minlen = min(shape)
-        thickness = int(minlen/600.0)
+        if minlen<=650:
+            thickness = 2
+        elif minlen<=950:
+            thickness = 3
+        else:
+            thickness = int(minlen/275.0)
     for idx, bbox in enumerate(bboxs):
         bbox[0] = int(bbox[0])
         bbox[1] = int(bbox[1])
@@ -148,6 +174,25 @@ def _add_bbox_img(img, bboxs=[], type="xywh",color=[0,0,255], score=None, thickn
         elif type == "x1y1wh": a, b = (bbox[0],bbox[1]),(bbox[0]+bbox[2],bbox[1]+bbox[3])
         else: a, b = (bbox[0]-int(bbox[2]/2),bbox[1]-int(bbox[3]/2)),(bbox[0]+int(bbox[2]/2),bbox[1]+int(bbox[3]/2))
         img = np.ascontiguousarray(img)
+        if mono_color:
+            _i = idx % 18
+            _LOW = -1
+            if _i < 9:
+                _1 = _i - 0 if 0 <= _i < 3 else _LOW
+                _2 = _i - 3 if 3 <= _i < 6 else _LOW
+                _3 = _i - 6 if 6 <= _i < 9 else _LOW
+            else:
+                _i -= 9
+                _1 = _i % 3
+                _2 = _i % 3
+                _3 = _i % 3
+                if 0 <= _i < 3:
+                    _1 = _LOW
+                elif 3 <= _i < 6:
+                    _2 = _LOW
+                elif 6 <= _i < 9:
+                    _3 = _LOW
+            color=[(127+63*_3)%256, (127+63*_2)%256, (127+63*_1)%256]
         img = cv2.rectangle(img,a,b,color, thickness=thickness, **kwargs)
         if score is not None:
             try:
